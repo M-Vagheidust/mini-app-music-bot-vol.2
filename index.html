@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>GapMusic Player</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f1117;
+      --card: #181b24;
+      --card-hover: #202430;
+      --primary: #1db954;
+      --primary-glow: rgba(29, 185, 84, 0.25);
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+      --border: rgba(255, 255, 255, 0.08);
+    }
+    * { box-sizing: border-box; font-family: 'Vazirmatn', sans-serif; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0; padding: 0 0 130px 0;
+      background: var(--bg); color: var(--text);
+      overflow-x: hidden;
+    }
+    header {
+      position: sticky; top: 0; z-index: 20;
+      background: rgba(15, 17, 23, 0.92);
+      backdrop-filter: blur(12px);
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .brand { font-size: 18px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+    .brand span { color: var(--primary); }
+    .random-btn {
+      background: var(--card); border: 1px solid var(--border); color: var(--text);
+      padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer;
+    }
+    .search-box {
+      width: 100%; background: var(--card); border: 1px solid var(--border);
+      color: var(--text); padding: 10px 14px; border-radius: 12px; font-size: 14px; outline: none;
+    }
+    .search-box:focus { border-color: var(--primary); }
+    .tabs { display: flex; gap: 8px; margin-top: 10px; }
+    .tab {
+      flex: 1; text-align: center; padding: 7px; border-radius: 10px;
+      background: var(--card); color: var(--muted); font-size: 13px; font-weight: 600; cursor: pointer;
+      border: 1px solid transparent;
+    }
+    .tab.active { background: var(--primary-glow); color: var(--primary); border-color: var(--primary); }
+
+    .song-list { padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
+    .song-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      transition: 0.2s;
+    }
+    .song-card.playing { border-color: var(--primary); background: rgba(29, 185, 84, 0.08); }
+    .song-info { flex: 1; min-width: 0; cursor: pointer; }
+    .song-title { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .song-artist { font-size: 12px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .actions { display: flex; align-items: center; gap: 6px; }
+    .icon-btn {
+      width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border);
+      background: rgba(255,255,255,0.04); color: var(--text); display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 15px;
+    }
+    .icon-btn.play { background: var(--primary); color: #000; border: none; font-weight: bold; }
+
+    /* Player Bar */
+    .player-bar {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 30;
+      background: rgba(22, 26, 35, 0.96); backdrop-filter: blur(16px);
+      border-top: 1px solid var(--border); padding: 10px 16px 14px;
+      display: none; flex-direction: column; gap: 8px;
+    }
+    .player-bar.visible { display: flex; }
+    .player-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .player-meta { flex: 1; min-width: 0; }
+    .player-title { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .player-artist { font-size: 11px; color: var(--primary); }
+    .player-controls { display: flex; align-items: center; gap: 10px; }
+    .ctrl-btn {
+      background: none; border: none; color: var(--text); font-size: 18px; cursor: pointer; padding: 4px;
+    }
+    .ctrl-btn.main {
+      width: 38px; height: 38px; border-radius: 50%; background: var(--primary); color: #000;
+      display: flex; align-items: center; justify-content: center; font-size: 16px;
+    }
+    .progress-wrap { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); }
+    input[type="range"] { flex: 1; accent-color: var(--primary); height: 4px; }
+    .empty-msg { text-align: center; color: var(--muted); padding: 40px 20px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="top-bar">
+      <div class="brand">🎧 <span>GapMusic</span></div>
+      <button class="random-btn" onclick="playRandom()">🎲 موزیک شانسی</button>
+    </div>
+    <input type="text" id="searchInput" class="search-box" placeholder="🔍 جستجوی نام آهنگ یا خواننده..." oninput="onSearch()" />
+    <div class="tabs">
+      <div class="tab active" id="tabAll" onclick="switchTab('all')">🎵 همه آهنگ‌ها</div>
+      <div class="tab" id="tabFav" onclick="switchTab('fav')">❤️ پلی‌لیست من</div>
+    </div>
+  </header>
+
+  <div id="songList" class="song-list">
+    <div class="empty-msg">در حال بارگذاری موزیک‌ها...</div>
+  </div>
+
+  <div id="playerBar" class="player-bar">
+    <div class="player-top">
+      <div class="player-meta">
+        <div class="player-title" id="pTitle">انتخاب آهنگ</div>
+        <div class="player-artist" id="pArtist">GapMusic</div>
+      </div>
+      <div class="player-controls">
+        <button class="ctrl-btn" onclick="playPrev()" title="قبلی">⏮</button>
+        <button class="ctrl-btn main" id="playPauseBtn" onclick="togglePlay()">▶</button>
+        <button class="ctrl-btn" onclick="playNext()" title="بعدی">⏭</button>
+      </div>
+    </div>
+    <div class="progress-wrap">
+      <span id="curTime">0:00</span>
+      <input type="range" id="seekBar" value="0" min="0" max="100" oninput="seekAudio()" />
+      <span id="durTime">0:00</span>
+    </div>
+  </div>
+
+  <audio id="audioPlayer" preload="none"></audio>
+
+  <script>
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+    }
+
+    const initData = tg?.initData || '';
+    const userId = tg?.initDataUnsafe?.user?.id || '';
+
+    let currentTab = 'all';
+    let currentSongs = [];
+    let favoriteIds = new Set();
+    let currentIndex = -1;
+    let searchTimer = null;
+
+    const audio = document.getElementById('audioPlayer');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const seekBar = document.getElementById('seekBar');
+
+    async function loadFavorites() {
+      try {
+        const res = await fetch(`/api/favorites?init_data=${encodeURIComponent(initData)}&user_id=${userId}`);
+        const data = await res.json();
+        favoriteIds = new Set(data.favorite_ids || []);
+        if (currentTab === 'fav') {
+          currentSongs = data.items || [];
+          renderSongs();
+        }
+      } catch (e) {}
+    }
+
+    async function loadSongs(q = '') {
+      const listEl = document.getElementById('songList');
+      try {
+        const res = await fetch(`/api/songs?q=${encodeURIComponent(q)}&limit=60`);
+        const data = await res.json();
+        currentSongs = data.items || [];
+        renderSongs();
+      } catch (e) {
+        listEl.innerHTML = '<div class="empty-msg">خطا در دریافت لیست موزیک‌ها</div>';
+      }
+    }
+
+    function switchTab(tab) {
+      currentTab = tab;
+      document.getElementById('tabAll').classList.toggle('active', tab === 'all');
+      document.getElementById('tabFav').classList.toggle('active', tab === 'fav');
+      if (tab === 'all') {
+        loadSongs(document.getElementById('searchInput').value);
+      } else {
+        loadFavorites();
+      }
+    }
+
+    function onSearch() {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        if (currentTab !== 'all') switchTab('all');
+        else loadSongs(document.getElementById('searchInput').value);
+      }, 300);
+    }
+
+    function renderSongs() {
+      const listEl = document.getElementById('songList');
+      if (!currentSongs.length) {
+        listEl.innerHTML = '<div class="empty-msg">موزیکی یافت نشد 🎵</div>';
+        return;
+      }
+      listEl.innerHTML = currentSongs.map((s, idx) => {
+        const isPlaying = currentIndex === idx && !audio.paused;
+        const isFav = favoriteIds.has(s.id);
+        return `
+          <div class="song-card ${currentIndex === idx ? 'playing' : ''}">
+            <div class="song-info" onclick="playSong(${idx})">
+              <div class="song-title">${escapeHtml(s.title)}</div>
+              <div class="song-artist">${escapeHtml(s.performer)}</div>
+            </div>
+            <div class="actions">
+              <button class="icon-btn" onclick="toggleFav(${s.id}, this)" title="علاقه‌مندی">${isFav ? '❤️' : '🤍'}</button>
+              <button class="icon-btn" onclick="sendToChat('${s.uid}')" title="ارسال به پیوی">📥</button>
+              <button class="icon-btn play" onclick="playSong(${idx})">${isPlaying ? '⏸' : '▶'}</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function playSong(idx) {
+      if (idx < 0 || idx >= currentSongs.length) return;
+      if (currentIndex === idx) {
+        togglePlay();
+        return;
+      }
+      currentIndex = idx;
+      const song = currentSongs[idx];
+      document.getElementById('pTitle').textContent = song.title;
+      document.getElementById('pArtist').textContent = song.performer;
+      document.getElementById('playerBar').classList.add('visible');
+
+      audio.src = `/api/stream/${encodeURIComponent(song.uid)}`;
+      audio.play().catch(() => {});
+      updateMediaSession(song);
+      renderSongs();
+    }
+
+    function togglePlay() {
+      if (!audio.src) return;
+      if (audio.paused) audio.play();
+      else audio.pause();
+    }
+
+    function playNext() {
+      if (!currentSongs.length) return;
+      const next = (currentIndex + 1) % currentSongs.length;
+      playSong(next);
+    }
+
+    function playPrev() {
+      if (!currentSongs.length) return;
+      const prev = (currentIndex - 1 + currentSongs.length) % currentSongs.length;
+      playSong(prev);
+    }
+
+    async function playRandom() {
+      try {
+        const res = await fetch('/api/random');
+        const song = await res.json();
+        if (song.uid) {
+          currentSongs = [song, ...currentSongs];
+          playSong(0);
+        }
+      } catch (e) {}
+    }
+
+    async function toggleFav(songId, btn) {
+      try {
+        const res = await fetch(`/api/favorite/${songId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ init_data: initData, user_id: userId })
+        });
+        const data = await res.json();
+        if (data.liked) favoriteIds.add(songId);
+        else favoriteIds.delete(songId);
+        btn.textContent = data.liked ? '❤️' : '🤍';
+        if (currentTab === 'fav' && !data.liked) loadFavorites();
+      } catch (e) {}
+    }
+
+    async function sendToChat(uid) {
+      try {
+        const res = await fetch(`/api/send/${encodeURIComponent(uid)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ init_data: initData, user_id: userId })
+        });
+        if (res.ok && tg) tg.showAlert('✅ موزیک به چت شما در ربات ارسال شد!');
+      } catch (e) {}
+    }
+
+    // پشتیبانی از پخش پس‌زمینه و دکمه‌های صفحه قفل گوشی
+    function updateMediaSession(song) {
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: song.title,
+          artist: song.performer,
+          album: 'GapMusic'
+        });
+        navigator.mediaSession.setActionHandler('play', () => audio.play());
+        navigator.mediaSession.setActionHandler('pause', () => audio.pause());
+        navigator.mediaSession.setActionHandler('nexttrack', playNext);
+        navigator.mediaSession.setActionHandler('previoustrack', playPrev);
+      }
+    }
+
+    audio.addEventListener('play', () => { playPauseBtn.textContent = '⏸'; renderSongs(); });
+    audio.addEventListener('pause', () => { playPauseBtn.textContent = '▶'; renderSongs(); });
+    audio.addEventListener('ended', playNext); // پخش خودکار آهنگ بعدی
+
+    audio.addEventListener('timeupdate', () => {
+      if (!audio.duration) return;
+      seekBar.value = (audio.currentTime / audio.duration) * 100;
+      document.getElementById('curTime').textContent = formatTime(audio.currentTime);
+      document.getElementById('durTime').textContent = formatTime(audio.duration);
+    });
+
+    function seekAudio() {
+      if (!audio.duration) return;
+      audio.currentTime = (seekBar.value / 100) * audio.duration;
+    }
+
+    function formatTime(sec) {
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return `${m}:${s < 10 ? '0' : ''}${s}`;
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+    }
+
+    loadFavorites();
+    loadSongs();
+  </script>
+</body>
+</html>
