@@ -451,6 +451,12 @@ app.get('/api/stream/:uid', async (req, res) => {
     res.setHeader('Accept-Ranges', 'bytes');
     res.setHeader('Cache-Control', 'public, max-age=3600');
 
+    if (req.query.download === '1') {
+      const ext = resolved.filePath.endsWith('.m4a') ? 'm4a' : 'mp3';
+      const cleanFilename = `${song.performer} - ${song.title}.${ext}`.replace(/[\\/:*?"<>|]/g, '_');
+      res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(cleanFilename)}`);
+    }
+
     if (streamResp.headers['content-length']) {
       res.setHeader('Content-Length', streamResp.headers['content-length']);
     }
