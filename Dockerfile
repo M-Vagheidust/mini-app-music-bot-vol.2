@@ -1,4 +1,4 @@
-FROM node:20-slim
+FROM node:22-slim
 WORKDIR /app
 COPY . .
 RUN if [ -f package.json ]; then npm install --omit=dev; else cd * && npm install --omit=dev; fi
