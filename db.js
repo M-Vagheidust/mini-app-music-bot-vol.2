@@ -1,13 +1,189 @@
+const fs = require('fs');
 const path = require('path');
 const { DatabaseSync } = require('node:sqlite');
 
 const DB_PATH = path.join(__dirname, 'gapmusic.db');
-const db = new DatabaseSync(DB_PATH);
 
-db.exec('PRAGMA journal_mode = WAL;');
-db.exec('PRAGMA synchronous = NORMAL;');
+function createSchema(database) {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS songs (
+      id INTEGER PRIMARY KEY,
+      uid TEXT UNIQUE,
+      from_chat_id TEXT,
+      message_id INTEGER,
+      file_id TEXT,
+      file_unique_id TEXT,
+      title TEXT,
+      performer TEXT,
+      search_text TEXT,
+      media_type TEXT DEFAULT 'audio',
+      plays INTEGER DEFAULT 0,
+      likes INTEGER DEFAULT 0,
+      available INTEGER DEFAULT 1
+    );
 
-// Prepared Statements for high performance
+    CREATE INDEX IF NOT EXISTS idx_songs_plays ON songs (plays DESC);
+    CREATE INDEX IF NOT EXISTS idx_songs_likes ON songs (likes DESC);
+    CREATE INDEX IF NOT EXISTS idx_songs_id_desc ON songs (id DESC);
+
+    CREATE VIRTUAL TABLE IF NOT EXISTS songs_fts USING fts5(
+      id UNINDEXED,
+      title,
+      performer,
+      search_text
+    );
+
+    CREATE TRIGGER IF NOT EXISTS songs_ai AFTER INSERT ON songs BEGIN
+      INSERT INTO songs_fts(id, title, performer, search_text)
+      VALUES (new.id, new.title, new.performer, new.search_text);
+    END;
+
+    CREATE TRIGGER IF NOT EXISTS songs_ad AFTER DELETE ON songs BEGIN
+      DELETE FROM songs_fts WHERE id = old.id;
+    END;
+
+    CREATE TRIGGER IF NOT EXISTS songs_au AFTER UPDATE ON songs BEGIN
+      DELETE FROM songs_fts WHERE id = old.id;
+      INSERT INTO songs_fts(id, title, performer, search_text)
+      VALUES (new.id, new.title, new.performer, new.search_text);
+    END;
+
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      name TEXT,
+      username TEXT,
+      joined_at INTEGER
+    );
+
+    CREATE TABLE IF NOT EXISTS favorites (
+      user_id TEXT,
+      song_id INTEGER,
+      created_at INTEGER,
+      PRIMARY KEY (user_id, song_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT,
+      user_name TEXT,
+      query TEXT,
+      expanded_query TEXT,
+      status TEXT DEFAULT 'pending',
+      fulfilled_song_id INTEGER,
+      created_at INTEGER,
+      fulfilled_at INTEGER
+    );
+
+    CREATE TABLE IF NOT EXISTS lyrics_cache (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      song_key TEXT UNIQUE,
+      synced_lyrics TEXT,
+      plain_lyrics TEXT,
+      cached_at INTEGER
+    );
+  `);
+}
+
+function initDatabase() {
+  let database;
+  try {
+    database = new DatabaseSync(DB_PATH);
+    database.exec('PRAGMA journal_mode = DELETE;');
+    database.exec('PRAGMA synchronous = NORMAL;');
+    const check = database.prepare('PRAGMA integrity_check;').get();
+    if (check?.integrity_check !== 'ok') {
+      throw new Error('Integrity check failed');
+    }
+    createSchema(database);
+  } catch (err) {
+    console.warn('⚠️ دیتابیس قبلی خراب یا ناقص بود، در حال ساخت دیتابیس سالم از صفر...');
+    try { if (database) database.close(); } catch (e) {}
+    ['gapmusic.db', 'gapmusic.db-wal', 'gapmusic.db-shm'].forEach(f => {
+      const p = path.join(__dirname, f);
+      if (fs.existsSync(p)) fs.unlinkSync(p);
+    });
+    database = new DatabaseSync(DB_PATH);
+    database.exec('PRAGMA journal_mode = DELETE;');
+    database.exec('PRAGMA synchronous = NORMAL;');
+    createSchema(database);
+  }
+
+  // ادغام خودکار فایل JSON با SQLite در صورت وجود
+  const jsonCandidates = ['songs_db (2).json', 'songs_db.json'];
+  const foundJson = jsonCandidates.find(name => fs.existsSync(path.join(__dirname, name)));
+
+  if (foundJson) {
+    try {
+      const jsonPath = path.join(__dirname, foundJson);
+      const raw = fs.readFileSync(jsonPath, 'utf8');
+      const songsList = JSON.parse(raw);
+
+      if (Array.isArray(songsList) && songsList.length > 0) {
+        const currentCount = database.prepare('SELECT COUNT(*) as c FROM songs').get()?.c || 0;
+        // اگر دیتابیس خالی است یا تعداد آهنگ‌های JSON بیشتر/متفاوت است، ادغام را انجام بده
+        if (currentCount < songsList.length) {
+          console.log(`🔄 در حال ادغام خودکار ${songsList.length} آهنگ از ${foundJson} به SQLite...`);
+          const upsert = database.prepare(`
+            INSERT INTO songs (
+              id, uid, from_chat_id, message_id, file_id, file_unique_id,
+              title, performer, search_text, media_type, plays, likes, available
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+              uid = excluded.uid,
+              from_chat_id = COALESCE(excluded.from_chat_id, songs.from_chat_id),
+              message_id = COALESCE(excluded.message_id, songs.message_id),
+              file_id = CASE WHEN excluded.file_id != '' THEN excluded.file_id ELSE songs.file_id END,
+              file_unique_id = CASE WHEN excluded.file_unique_id != '' THEN excluded.file_unique_id ELSE songs.file_unique_id END,
+              title = excluded.title,
+              performer = excluded.performer,
+              search_text = excluded.search_text,
+              plays = MAX(songs.plays, excluded.plays),
+              likes = MAX(songs.likes, excluded.likes),
+              available = excluded.available
+          `);
+
+          database.exec('BEGIN TRANSACTION;');
+          for (const s of songsList) {
+            if (!s || typeof s.id !== 'number') continue;
+            upsert.run(
+              s.id,
+              String(s.uid || `${s.id}_${s.message_id || Date.now()}`),
+              s.from_chat_id !== null && s.from_chat_id !== undefined ? String(s.from_chat_id) : null,
+              s.message_id !== null && s.message_id !== undefined ? parseInt(s.message_id, 10) : null,
+              String(s.file_id || '').trim(),
+              String(s.file_unique_id || '').trim(),
+              String(s.title || 'نامشخص').trim(),
+              String(s.performer || 'نامشخص').trim(),
+              String(s.search_text || `${s.title} ${s.performer}`).toLowerCase(),
+              String(s.media_type || 'audio').trim(),
+              parseInt(s.plays, 10) || 0,
+              parseInt(s.likes, 10) || 0,
+              s.available === false || s.available === 0 ? 0 : 1
+            );
+          }
+          database.exec('COMMIT;');
+
+          // بازسازی ایندکس FTS5
+          database.exec('DELETE FROM songs_fts;');
+          database.exec(`
+            INSERT INTO songs_fts(id, title, performer, search_text)
+            SELECT id, title, performer, search_text FROM songs;
+          `);
+          console.log(`✅ ادغام با موفقیت انجام شد! کل ترک‌های فعال: ${database.prepare('SELECT COUNT(*) as c FROM songs WHERE available = 1').get().c}`);
+        }
+      }
+    } catch (mergeErr) {
+      try { database.exec('ROLLBACK;'); } catch (e) {}
+      console.error('⚠️ خطا در ادغام JSON:', mergeErr.message);
+    }
+  }
+
+  return database;
+}
+
+const db = initDatabase();
+
+// Prepared Statements
 const stmtGetSongById = db.prepare('SELECT * FROM songs WHERE id = ?');
 const stmtGetSongByUid = db.prepare('SELECT * FROM songs WHERE uid = ? OR id = ?');
 const stmtIncrementPlays = db.prepare('UPDATE songs SET plays = plays + 1 WHERE id = ?');
@@ -30,7 +206,6 @@ const stmtUpsertUser = db.prepare('INSERT INTO users (id, name, username, joined
 const stmtGetLyrics = db.prepare('SELECT synced_lyrics, plain_lyrics FROM lyrics_cache WHERE song_key = ?');
 const stmtSaveLyrics = db.prepare('INSERT OR REPLACE INTO lyrics_cache (song_key, synced_lyrics, plain_lyrics, cached_at) VALUES (?, ?, ?, ?)');
 
-// Bilingual aliases dictionary
 const BILINGUAL_ALIASES = [
   ['tataloo', 'تتلو', 'امیر تتلو'],
   ['yas', 'یاس'],
@@ -163,12 +338,10 @@ function expandBilingualTerms(text) {
   return Array.from(extras).join(' ');
 }
 
-// Format query into FTS5 safe string
 function formatFtsQuery(rawQuery) {
   const expanded = expandBilingualTerms(rawQuery);
   const tokens = Array.from(new Set(expanded.split(/\s+/).map(t => t.replace(/[^\p{L}\p{N}]/gu, '')).filter(t => t.length >= 2)));
   if (!tokens.length) return '';
-  // OR between tokens to find any relevance, with prefix matching
   return tokens.map(t => `"${t}"*`).join(' OR ');
 }
 
@@ -247,13 +420,11 @@ const DB = {
         `;
         items = db.prepare(selectQuery).all(ftsQuery, limit, offset);
       } catch (e) {
-        // Fallback to LIKE if FTS syntax error occurs
         items = [];
         total = 0;
       }
     }
 
-    // Fallback if FTS returned 0 results
     if (items.length === 0 && total === 0) {
       const norm = normalizeText(rawQuery);
       if (norm) {
@@ -311,7 +482,6 @@ const DB = {
     const favorite_ids = favRows.map(r => r.song_id);
     if (!favorite_ids.length) return { favorite_ids: [], items: [] };
 
-    // Fetch songs in same order
     const placeholders = favorite_ids.map(() => '?').join(',');
     const songs = db.prepare(`SELECT * FROM songs WHERE id IN (${placeholders}) AND available = 1`).all(...favorite_ids);
     const map = new Map(songs.map(s => [s.id, s]));
