@@ -44,11 +44,15 @@
     }
 
     body {
-      padding-bottom: calc(138px + env(safe-area-inset-bottom, 0px));
+      padding-bottom: calc(85px + env(safe-area-inset-bottom, 0px));
       background: radial-gradient(circle at 50% 0%, rgba(0, 245, 212, 0.12) 0%, #0a0d14 45%, #05070b 100%);
       background-color: var(--bg);
       color: var(--text);
       min-height: 100dvh;
+      transition: padding-bottom 0.3s ease;
+    }
+    body.has-mini-player {
+      padding-bottom: calc(142px + env(safe-area-inset-bottom, 0px));
     }
 
     .app-header, button, .quick-action-box, .nav-item, .svg-btn, .track-cover, .mp-art, .fp-artwork {
@@ -122,29 +126,36 @@
       -webkit-text-fill-color: transparent;
     }
 
-    /* User Profile Pill (Never Overflows) */
+    /* Perfectly Fitted RTL User Profile Pill */
     .user-badge {
       display: inline-flex;
       align-items: center;
-      gap: 7px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 3px 10px 3px 4px;
-      border-radius: 22px;
-      font-size: 11.5px;
+      justify-content: flex-start;
+      gap: 8px;
+      height: 34px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 4px 5px 4px 12px;
+      border-radius: 999px;
+      font-size: 12px;
       font-weight: 700;
-      max-width: 165px;
+      max-width: 175px;
       min-width: 0;
+      overflow: hidden;
     }
     .user-badge span {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       color: #ffffff;
+      line-height: 1;
+      padding-top: 1px;
     }
     .user-avatar {
-      width: 24px;
-      height: 24px;
+      width: 25px;
+      height: 25px;
+      min-width: 25px;
+      min-height: 25px;
       border-radius: 50%;
       background: linear-gradient(135deg, var(--cyan), #00b4d8);
       color: #07090e;
@@ -155,8 +166,16 @@
       font-weight: 900;
       overflow: hidden;
       flex-shrink: 0;
+      border: 1px solid rgba(0, 245, 212, 0.45);
     }
-    .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .user-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      display: block;
+      border-radius: 50%;
+    }
 
     /* Organized Action Toolbar (Request & Admin) */
     .header-toolbar {
@@ -378,28 +397,33 @@
       justify-content: center;
     }
 
-    /* Floating Mini Player */
+    /* Floating Mini Player (Completely Hidden Until a Song Plays) */
     .sp-mini-player {
+      display: none;
       position: fixed;
       bottom: calc(66px + env(safe-area-inset-bottom, 0px));
       left: 12px;
       right: 12px;
       height: 54px;
-      background: rgba(14, 18, 26, 0.95);
+      background: rgba(14, 18, 26, 0.96);
       backdrop-filter: blur(25px);
       -webkit-backdrop-filter: blur(25px);
       border: 1px solid var(--border-cyan);
       border-radius: 15px;
-      display: flex;
       align-items: center;
       padding: 0 10px;
       gap: 10px;
       z-index: 40;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px var(--cyan-soft);
-      transform: translateY(160%);
-      transition: transform 0.4s var(--ease-spring);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65), 0 0 20px var(--cyan-soft);
+      animation: slideUpMini 0.35s var(--ease-spring) forwards;
     }
-    .sp-mini-player.visible { transform: translateY(0); }
+    .sp-mini-player.visible {
+      display: flex;
+    }
+    @keyframes slideUpMini {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
 
     .mp-art {
       width: 38px;
@@ -612,7 +636,7 @@
       gap: 6px;
     }
 
-    /* Responsive Artwork Container (Scales automatically to fit screen height) */
+    /* Responsive Artwork Container */
     .fp-artwork-wrap {
       flex: 1;
       min-height: 0;
@@ -1067,7 +1091,7 @@
 
   <!-- Clean Organized Header -->
   <header class="app-header">
-    <!-- Row 1: Logo + User Profile -->
+    <!-- Row 1: Logo + Perfectly Fitted User Profile -->
     <div class="header-top">
       <div class="brand-box">
         <div class="wave-icon">
@@ -1095,7 +1119,7 @@
     </div>
   </header>
 
-  <!-- Quick Filter Buttons (4 Equal Columns) -->
+  <!-- Quick Filter Buttons -->
   <div class="quick-actions">
     <div class="quick-action-box active" id="boxAll" onclick="setFilter('all')">
       <div class="qab-icon">🎵</div>
@@ -1132,12 +1156,12 @@
   <div class="track-list" id="trackList"></div>
   <button class="load-more" id="loadMoreBtn" style="display:none;" onclick="loadMore()">نمایش موزیک‌های بیشتر</button>
 
-  <!-- Floating Mini Player -->
+  <!-- Floating Mini Player (Appears ONLY when a song is selected/playing) -->
   <div class="sp-mini-player" id="miniPlayer">
     <div class="mp-art" id="mpArt" onclick="openFullPlayer()">🎵</div>
     <div class="mp-info" onclick="openFullPlayer()">
-      <div class="mp-title" id="mpTitle">انتخاب موزیک</div>
-      <div class="mp-artist" id="mpArtist">GapMusic</div>
+      <div class="mp-title" id="mpTitle"></div>
+      <div class="mp-artist" id="mpArtist"></div>
     </div>
     <button class="svg-btn" id="mpFavBtn" onclick="toggleCurrentFav()">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
@@ -1420,7 +1444,6 @@
 
     const audio = document.getElementById('audioPlayer');
 
-    // Symmetrical Centered Waveform Bars
     const WAVE_BARS_COUNT = 50;
     let baseHeights = [];
     let waveBarsEls = [];
@@ -1587,9 +1610,6 @@
       }
     }
 
-    // ===================================================================
-    // FULL ALBUM COVER LOADER FOR ALL TRACKS (LAZY INTERSECTION OBSERVER)
-    // ===================================================================
     async function fetchCover(song, targetIds = []) {
       const key = `${song.performer}_${song.title}`;
       if (coverCache.has(key)) {
@@ -2069,7 +2089,6 @@
         `;
       }).join('');
 
-      // فعال کردن لود کاور برای تمام آهنگ‌ها هنگام اسکرول
       document.querySelectorAll('.track-cover').forEach(el => coverObserver.observe(el));
     }
 
@@ -2085,7 +2104,10 @@
       currentSong = song;
       initWaveformBars(song.id || 1);
       updatePlayerUI(song);
+
+      // نمایش مینی‌پلیر فقط پس از انتخاب موزیک
       document.getElementById('miniPlayer').classList.add('visible');
+      document.body.classList.add('has-mini-player');
 
       setupAudioAnalyser();
       if (audioCtx && audioCtx.state === 'suspended') {
