@@ -73,7 +73,7 @@
       position: sticky;
       top: 0;
       z-index: 25;
-      background: rgba(7, 9, 14, 0.92);
+      background: rgba(7, 9, 14, 0.94);
       backdrop-filter: blur(22px);
       -webkit-backdrop-filter: blur(22px);
       border-bottom: 1px solid var(--border);
@@ -177,7 +177,7 @@
       border-radius: 50%;
     }
 
-    /* Organized Action Toolbar (Request & Admin) */
+    /* Organized Action Toolbar */
     .header-toolbar {
       display: flex;
       align-items: center;
@@ -397,7 +397,7 @@
       justify-content: center;
     }
 
-    /* Floating Mini Player (Completely Hidden Until a Song Plays) */
+    /* Floating Mini Player (Hidden Until a Song Plays) */
     .sp-mini-player {
       display: none;
       position: fixed;
@@ -417,9 +417,7 @@
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65), 0 0 20px var(--cyan-soft);
       animation: slideUpMini 0.35s var(--ease-spring) forwards;
     }
-    .sp-mini-player.visible {
-      display: flex;
-    }
+    .sp-mini-player.visible { display: flex; }
     @keyframes slideUpMini {
       from { opacity: 0; transform: translateY(24px); }
       to { opacity: 1; transform: translateY(0); }
@@ -524,22 +522,24 @@
     }
 
     /* ===================================================================
-       FULL-SCREEN PLAYER (100% FIT ON ALL MOBILE VIEWPORTS)
+       FULL-SCREEN PLAYER (DEAD-CENTER SYMMETRICAL & OPAQUE BACKDROP)
        =================================================================== */
     .full-player {
       position: fixed;
       inset: 0;
-      width: 100vw;
+      width: 100%;
       height: 100dvh;
       max-height: 100dvh;
       z-index: 100;
-      background: radial-gradient(circle at 50% 28%, rgba(0, 245, 212, 0.16) 0%, #070d16 55%, #04070d 100%);
+      background-color: #05080f;
+      background-image: radial-gradient(circle at 50% 26%, rgba(0, 245, 212, 0.16) 0%, #070c15 58%, #04060b 100%);
       display: flex;
       flex-direction: column;
-      padding: max(12px, env(safe-area-inset-top, 12px)) 16px max(16px, env(safe-area-inset-bottom, 16px));
+      padding: max(14px, env(safe-area-inset-top, 14px)) 16px max(18px, env(safe-area-inset-bottom, 18px));
       transform: translateY(100%);
       transition: transform 0.42s var(--ease-spring);
       overflow: hidden;
+      direction: ltr;
     }
     .full-player.open { transform: translateY(0); }
 
@@ -548,8 +548,8 @@
       inset: -30px;
       background-size: cover;
       background-position: center;
-      filter: blur(80px) brightness(0.38);
-      opacity: 0.35;
+      filter: blur(85px) brightness(0.32);
+      opacity: 0.3;
       z-index: 0;
       pointer-events: none;
       transition: background-image 0.8s ease, opacity 0.5s ease;
@@ -560,19 +560,40 @@
       z-index: 1;
       display: flex;
       flex-direction: column;
+      align-items: center;
+      width: 100%;
       height: 100%;
       min-height: 0;
       justify-content: space-between;
       gap: 6px;
     }
 
-    /* Top Header */
+    /* Symmetrical 3-Column Grid Top Bar (Guarantees Dead-Center Pill) */
     .fp-top {
-      display: flex;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: 80px 1fr 80px;
       align-items: center;
-      direction: ltr;
+      width: 100%;
       flex-shrink: 0;
+    }
+
+    .fp-top-left {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    .fp-top-center {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .fp-top-right {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
     }
 
     .fp-circle-btn {
@@ -597,12 +618,13 @@
     }
 
     .fp-pill-badge {
-      display: flex;
+      display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 7px;
-      background: rgba(12, 22, 34, 0.72);
+      background: rgba(12, 22, 34, 0.85);
       backdrop-filter: blur(20px);
-      border: 1px solid rgba(0, 245, 212, 0.38);
+      border: 1px solid rgba(0, 245, 212, 0.4);
       box-shadow: 0 0 18px rgba(0, 245, 212, 0.18);
       padding: 6px 14px;
       border-radius: 30px;
@@ -610,6 +632,7 @@
       font-weight: 900;
       letter-spacing: 1.3px;
       color: #ffffff;
+      white-space: nowrap;
     }
     .fp-pill-badge b { color: var(--cyan); }
 
@@ -630,20 +653,14 @@
     .pill-wave span:nth-child(2) { animation-delay: 0.25s; }
     .pill-wave span:nth-child(3) { animation-delay: 0.45s; }
 
-    .fp-top-right {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    /* Responsive Artwork Container */
+    /* Dead-Center Responsive Artwork Container */
     .fp-artwork-wrap {
       flex: 1;
       min-height: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 2px auto;
+      margin: 0 auto;
       width: 100%;
     }
 
@@ -652,7 +669,7 @@
       height: min(245px, 64vw, 31vh);
       border-radius: 24px;
       background: linear-gradient(145deg, #101928, #090e17);
-      box-shadow: 0 16px 45px rgba(0, 0, 0, 0.8), 0 0 32px rgba(0, 245, 212, 0.32);
+      box-shadow: 0 16px 45px rgba(0, 0, 0, 0.85), 0 0 32px rgba(0, 245, 212, 0.32);
       border: 1.5px solid rgba(0, 245, 212, 0.45);
       position: relative;
       overflow: hidden;
@@ -661,12 +678,13 @@
       justify-content: center;
       font-size: 56px;
       font-weight: 900;
+      color: #ffffff;
       cursor: pointer;
       transition: transform 0.4s var(--ease-spring), box-shadow 0.4s ease;
     }
     .fp-artwork.playing-scale {
       transform: scale(1.02);
-      box-shadow: 0 20px 52px rgba(0, 0, 0, 0.85), 0 0 42px rgba(0, 245, 212, 0.44);
+      box-shadow: 0 20px 52px rgba(0, 0, 0, 0.9), 0 0 42px rgba(0, 245, 212, 0.44);
     }
     .fp-artwork img {
       width: 100%;
@@ -681,16 +699,17 @@
       width: min(295px, 84vw);
       height: min(245px, 31vh);
       border-radius: 24px;
-      background: rgba(10, 15, 24, 0.92);
+      background: rgba(10, 15, 24, 0.95);
       backdrop-filter: blur(28px);
       -webkit-backdrop-filter: blur(28px);
       border: 1.5px solid var(--border-cyan);
-      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.75), 0 0 30px rgba(0, 245, 212, 0.25);
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 245, 212, 0.25);
       padding: 12px 10px;
       display: flex;
       flex-direction: column;
       position: relative;
       overflow: hidden;
+      direction: rtl;
     }
     .fp-lyrics-header {
       font-size: 11px;
@@ -735,6 +754,8 @@
     .fp-bottom-block {
       flex-shrink: 0;
       width: 100%;
+      max-width: 440px;
+      margin: 0 auto;
     }
 
     /* Centered Track Title & Artist */
@@ -785,7 +806,7 @@
     /* Centered Symmetrical Audio Waveform */
     .fp-wave-section {
       margin: 2px 0 10px;
-      direction: ltr;
+      width: 100%;
     }
     .waveform-container {
       width: 100%;
@@ -826,14 +847,14 @@
 
     /* Clean Two-Row Glass Controls Card */
     .fp-glass-card {
-      background: rgba(13, 21, 33, 0.78);
+      background: rgba(13, 21, 33, 0.88);
       backdrop-filter: blur(26px);
       -webkit-backdrop-filter: blur(26px);
       border: 1px solid rgba(255, 255, 255, 0.14);
       border-radius: 22px;
       padding: 11px 14px 10px;
-      direction: ltr;
-      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      width: 100%;
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08);
     }
 
     .fp-main-row {
@@ -1091,7 +1112,6 @@
 
   <!-- Clean Organized Header -->
   <header class="app-header">
-    <!-- Row 1: Logo + Perfectly Fitted User Profile -->
     <div class="header-top">
       <div class="brand-box">
         <div class="wave-icon">
@@ -1106,13 +1126,11 @@
       </div>
     </div>
 
-    <!-- Row 2: Neat Action Buttons (Request Song & Admin Panel) -->
     <div class="header-toolbar">
       <button class="toolbar-btn request-btn" onclick="openRequestModal()">📩 ثبت درخواست آهنگ</button>
       <button class="toolbar-btn admin-btn" id="adminToggleBtn" style="display:none;" onclick="toggleAdminMode()">🛡️ پنل مدیریت ادمین</button>
     </div>
 
-    <!-- Row 3: Search Input -->
     <div class="search-wrapper">
       <svg class="search-icon" width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
       <input type="text" class="search-input" id="searchInput" placeholder="جستجوی فارسی یا انگلیسی (تتلو، شایع، The Weeknd...)" oninput="onSearch()" />
@@ -1133,7 +1151,7 @@
       <div class="qab-icon">❤️</div>
       <div class="qab-label">پلی‌لیست من</div>
     </div>
-    <div class="quick-action-box" onclick="playRandom()">
+    <div class="quick-action-box" id="boxRandom" onclick="playRandom()">
       <div class="qab-icon">🎲</div>
       <div class="qab-label">پخش شانسی</div>
     </div>
@@ -1156,7 +1174,7 @@
   <div class="track-list" id="trackList"></div>
   <button class="load-more" id="loadMoreBtn" style="display:none;" onclick="loadMore()">نمایش موزیک‌های بیشتر</button>
 
-  <!-- Floating Mini Player (Appears ONLY when a song is selected/playing) -->
+  <!-- Floating Mini Player -->
   <div class="sp-mini-player" id="miniPlayer">
     <div class="mp-art" id="mpArt" onclick="openFullPlayer()">🎵</div>
     <div class="mp-info" onclick="openFullPlayer()">
@@ -1196,22 +1214,26 @@
   </nav>
 
   <!-- ===================================================================
-       FULL-SCREEN PLAYER (MOBILE VIEWPORT FITTED)
+       FULL-SCREEN PLAYER (DEAD-CENTER SYMMETRICAL & OPAQUE)
        =================================================================== -->
   <div class="full-player" id="fullPlayer">
     <div class="fp-ambient-bg" id="fpAmbientBg"></div>
 
     <div class="fp-content-layer">
-      <!-- Top Header -->
+      <!-- Symmetrical 3-Column Header -->
       <div class="fp-top">
-        <button class="fp-circle-btn" onclick="closeFullPlayer()" title="بستن پلیر">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
-        </button>
+        <div class="fp-top-left">
+          <button class="fp-circle-btn" onclick="closeFullPlayer()" title="بستن پلیر">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+          </button>
+        </div>
 
-        <div class="fp-pill-badge">
-          <span>GAP<b>MUSIC</b></span>
-          <div class="pill-wave">
-            <span></span><span></span><span></span>
+        <div class="fp-top-center">
+          <div class="fp-pill-badge">
+            <span>GAP<b>MUSIC</b></span>
+            <div class="pill-wave">
+              <span></span><span></span><span></span>
+            </div>
           </div>
         </div>
 
@@ -1241,7 +1263,6 @@
 
       <!-- Bottom Block -->
       <div class="fp-bottom-block">
-        <!-- Centered Title & Artist -->
         <div class="fp-center-details">
           <div class="fp-title" id="fpTitle">عنوان موزیک</div>
           <div class="fp-artist-row">
@@ -1250,7 +1271,6 @@
           </div>
         </div>
 
-        <!-- Centered Symmetrical Audio Waveform -->
         <div class="fp-wave-section">
           <div class="waveform-container" id="waveformContainer"></div>
           <div class="fp-times">
@@ -1259,7 +1279,6 @@
           </div>
         </div>
 
-        <!-- Clean Two-Row Glass Control Box -->
         <div class="fp-glass-card">
           <div class="fp-main-row">
             <button class="fp-clean-btn" id="shuffleBtn" onclick="toggleShuffle()" title="پخش تصادفی">
@@ -1672,7 +1691,7 @@
       const bgEl = document.getElementById('fpAmbientBg');
       if (bgEl && url) {
         bgEl.style.backgroundImage = `url('${url}')`;
-        bgEl.style.opacity = '0.42';
+        bgEl.style.opacity = '0.32';
       }
     }
 
@@ -1687,7 +1706,7 @@
           coverObserver.unobserve(el);
         }
       });
-    }, { rootMargin: '250px' });
+    }, { rootMargin: '300px' });
 
     function parseLRC(lrcText) {
       if (!lrcText) return [];
@@ -1737,7 +1756,7 @@
         return;
       }
 
-      scrollEl.innerHTML = '<div class="lyrics-empty">⏳ در حال دریافت متن ترانه...</div>';
+      scrollEl.innerHTML = '<div class="lyrics-empty">⏳ در حال بررسی متن ترانه...</div>';
 
       try {
         const res = await fetch(`/api/lyrics?title=${encodeURIComponent(song.title)}&artist=${encodeURIComponent(song.performer)}`);
@@ -1750,7 +1769,7 @@
           scrollEl.innerHTML = '<div class="lyrics-empty">متن ترانه برای این آهنگ ثبت نشده است 🎤</div>';
         }
       } catch (e) {
-        scrollEl.innerHTML = '<div class="lyrics-empty">خطا در دریافت متن ترانه</div>';
+        scrollEl.innerHTML = '<div class="lyrics-empty">متن ترانه در دسترس نیست</div>';
       }
     }
 
@@ -1775,7 +1794,7 @@
         return;
       }
 
-      scrollEl.innerHTML = '<div class="lyrics-empty">متن ترانه موجود نیست.</div>';
+      scrollEl.innerHTML = '<div class="lyrics-empty">متن ترانه برای این آهنگ ثبت نشده است 🎤</div>';
     }
 
     function seekToLyric(timeSec) {
@@ -1837,7 +1856,7 @@
       countEl.textContent = playQueue.length;
 
       if (!playQueue.length) {
-        listEl.innerHTML = '<div class="lyrics-empty">صف پخش خالی است. با زدن دکمه ➕ کنار هر آهنگ آن را به صف اضافه کنید.</div>';
+        listEl.innerHTML = '<div class="lyrics-empty">صف پخش خالی است. با زدن دکمه ➕ کنار آهنگ‌ها آن‌ها را به صف اضافه کنید.</div>';
         return;
       }
 
@@ -2092,12 +2111,12 @@
       document.querySelectorAll('.track-cover').forEach(el => coverObserver.observe(el));
     }
 
-    async function playSongByIndex(idx) {
-      if (idx < 0 || idx >= currentSongs.length) return;
-      const song = currentSongs[idx];
+    async function playSongObject(song, openPlayer = false) {
+      if (!song) return;
 
       if (currentSong && currentSong.uid === song.uid) {
         togglePlay();
+        if (openPlayer) openFullPlayer();
         return;
       }
 
@@ -2105,9 +2124,9 @@
       initWaveformBars(song.id || 1);
       updatePlayerUI(song);
 
-      // نمایش مینی‌پلیر فقط پس از انتخاب موزیک
       document.getElementById('miniPlayer').classList.add('visible');
       document.body.classList.add('has-mini-player');
+      if (openPlayer) document.getElementById('fullPlayer').classList.add('open');
 
       setupAudioAnalyser();
       if (audioCtx && audioCtx.state === 'suspended') {
@@ -2120,13 +2139,18 @@
       try {
         await audio.play();
       } catch (err) {
-        showToast('⚠️ این ترک هنوز سینک نشده یا قابل پخش آنلاین نیست.');
+        showToast('⚠️ در حال تلاش مجدد برای پخش...');
       }
 
       const artUrl = await fetchCover(song, ['mpArt', 'fpArt']);
       updateMediaSession(song, artUrl);
       if (isLyricsOpen) loadLyrics(song);
       renderSongs();
+    }
+
+    async function playSongByIndex(idx) {
+      if (idx < 0 || idx >= currentSongs.length) return;
+      await playSongObject(currentSongs[idx], false);
     }
 
     function updatePlayerUI(song) {
@@ -2163,16 +2187,14 @@
       }
       if (playQueue.length > 0) {
         const nextSong = playQueue.shift();
-        currentSongs = [nextSong, ...currentSongs.filter(s => s.uid !== nextSong.uid)];
-        playSongByIndex(0);
+        playSongObject(nextSong, false);
+        return;
+      }
+      if (isShuffle) {
+        playRandom(false);
         return;
       }
       if (!currentSongs.length) return;
-      if (isShuffle) {
-        const randIdx = Math.floor(Math.random() * currentSongs.length);
-        playSongByIndex(randIdx);
-        return;
-      }
       const idx = currentSongs.findIndex(s => currentSong && s.uid === currentSong.uid);
       if (idx === currentSongs.length - 1 && repeatMode === 'off') {
         audio.pause();
@@ -2187,15 +2209,31 @@
       playSongByIndex((idx - 1 + currentSongs.length) % currentSongs.length);
     }
 
-    async function playRandom() {
+    // پخش شانسی تضمینی
+    let isFetchingRandom = false;
+    async function playRandom(shouldOpenPlayer = true) {
+      if (isFetchingRandom) return;
+      isFetchingRandom = true;
+      if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+      showToast('🎲 در حال انتخاب موزیک شانسی...');
+
       try {
-        const res = await fetch('/api/random');
+        const excludeParam = currentSong ? `?exclude_id=${currentSong.id}` : '';
+        const res = await fetch(`/api/random${excludeParam}`);
         const song = await res.json();
-        if (song.uid) {
-          currentSongs = [song, ...currentSongs];
-          playSongByIndex(0);
+        if (res.ok && song && song.uid) {
+          if (!currentSongs.some(s => s.uid === song.uid)) {
+            currentSongs = [song, ...currentSongs];
+          }
+          await playSongObject(song, shouldOpenPlayer);
+        } else {
+          showToast('❌ آهنگی برای پخش شانسی یافت نشد');
         }
-      } catch (e) {}
+      } catch (e) {
+        showToast('❌ خطا در دریافت موزیک شانسی');
+      } finally {
+        isFetchingRandom = false;
+      }
     }
 
     async function toggleFav(songId, btn) {
@@ -2223,7 +2261,10 @@
     }
 
     function openFullPlayer() {
-      if (!currentSong && currentSongs.length > 0) playSongByIndex(0);
+      if (!currentSong && currentSongs.length > 0) {
+        playSongObject(currentSongs[0], true);
+        return;
+      }
       document.getElementById('fullPlayer').classList.add('open');
     }
     function closeFullPlayer() { document.getElementById('fullPlayer').classList.remove('open'); }
