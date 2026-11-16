@@ -12,7 +12,7 @@ const BOT_TOKEN = (process.env.BOT_TOKEN || '').trim();
 const STORAGE_BOT_TOKEN = (process.env.STORAGE_BOT_TOKEN || '').trim();
 let rawUrl = (process.env.MINI_APP_URL || '').replace(/\/$/, '').trim();
 const MINI_APP_URL = rawUrl ? (rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`) : '';
-const APP_VERSION = '2.8.0';
+const APP_VERSION = '2.9.0';
 const WEB_APP_URL = MINI_APP_URL
   ? (MINI_APP_URL.includes('?') ? `${MINI_APP_URL}&v=${APP_VERSION}` : `${MINI_APP_URL}?v=${APP_VERSION}`)
   : '';
@@ -53,6 +53,41 @@ function cleanDisplayText(text) {
   return t || 'نامشخص';
 }
 
+// استخراج دقیق نام خواننده و آهنگ حتی اگر هر دو در title چسبیده باشند
+function extractArtistAndTitle(rawTitle, rawArtist) {
+  let title = cleanDisplayText(rawTitle)
+    .replace(/\b(official|audio|video|lyrics|lyric|remix|slowed|reverb|sped up|feat|ft|320|128|160|mp3|m4a|full|hd|4k|www\.[a-z0-9.-]+)\b/gi, '')
+    .replace(/\(.*?\)|\[.*?\]/g, '')
+    .replace(/<unknown>/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  let artist = cleanDisplayText(rawArtist)
+    .replace(/<unknown>/gi, '')
+    .replace(/\(.*?\)|\[.*?\]/g, '')
+    .replace(/\b(www\.[a-z0-9.-]+|t\.me\/[a-z0-9_]+|tel\s*\|.*)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (artist === 'نامشخص' || artist.toLowerCase() === 'unknown') artist = '';
+  if (title === 'نامشخص' || title.toLowerCase() === 'unknown') title = '';
+
+  // اگر خواننده خالی بود ولی در عنوان خط تیره بود (مثلاً "Googoosh - Komakam Kon")
+  if (!artist && /\s+[-–—]\s+/.test(title)) {
+    const parts = title.split(/\s+[-–—]\s+/);
+    artist = parts[0].trim();
+    title = parts.slice(1).join(' ').trim();
+  }
+
+  // حذف نام خواننده از ابتدای عنوان در صورت تکرار
+  if (artist && title.toLowerCase().startsWith(artist.toLowerCase() + ' - ')) {
+    title = title.slice(artist.length + 3).trim();
+  }
+
+  const primaryArtist = artist.split(/[&,xX،|]/)[0].trim();
+  return { artist: primaryArtist, title };
+}
+
 function resolveUserId(initData, fallbackId) {
   if (initData && BOT_TOKEN) {
     try {
@@ -81,11 +116,9 @@ function resolveUserId(initData, fallbackId) {
   return null;
 }
 
-// استخراج مسیر فایل بدون هیچ‌گونه ارسال پیام اضافه به کاربر
 async function resolvePlayableFile(song) {
   let lastError = 'اطلاعات فایل ناقص است';
 
-  // ۱. بررسی file_id با ربات فعلی
   if (song.file_id && String(song.file_id).trim()) {
     try {
       const check = await axios.get(`${TELEGRAM_API}/getFile`, {
@@ -105,7 +138,6 @@ async function resolvePlayableFile(song) {
     }
   }
 
-  // ۲. بررسی file_id با ربات انبار (STORAGE_BOT_TOKEN)
   if (STORAGE_BOT_TOKEN && STORAGE_BOT_TOKEN !== BOT_TOKEN && song.file_id && String(song.file_id).trim()) {
     try {
       const checkStorage = await axios.get(`https://api.telegram.org/bot${STORAGE_BOT_TOKEN}/getFile`, {
@@ -125,7 +157,6 @@ async function resolvePlayableFile(song) {
     }
   }
 
-  // ۳. استخراج بی‌صدا از چت مبدأ فقط از طریق ادمین و پاک کردن فوری پیام موقت
   if (song.from_chat_id && song.message_id && ADMIN_IDS.length > 0) {
     let chatId = String(song.from_chat_id).trim();
     const candidates = [chatId];
@@ -179,7 +210,6 @@ async function resolvePlayableFile(song) {
   return { error: lastError };
 }
 
-// ارسال یک‌باره و تضمینی موزیک به پی‌وی کاربر با کپشن مینی‌اپ
 async function sendMusicToUserChat(chatId, song, caption, replyMarkup = null) {
   const lockKey = `${chatId}_${song.id}`;
   if (activeSends.has(lockKey)) {
@@ -192,7 +222,6 @@ async function sendMusicToUserChat(chatId, song, caption, replyMarkup = null) {
     const basePayload = { chat_id: chatId, caption };
     if (replyMarkup) basePayload.reply_markup = replyMarkup;
 
-    // روش ۱: ارسال مستقیم با file_id ربات فعلی
     if (resolved?.fileId && resolved?.isSameBot) {
       try {
         const r = await axios.post(`${TELEGRAM_API}/sendAudio`, {
@@ -211,7 +240,6 @@ async function sendMusicToUserChat(chatId, song, caption, replyMarkup = null) {
       }
     }
 
-    // روش ۲: استریم فایل از سرور تلگرام (انبار) و آپلود تمیز با کپشن مینی‌اپ
     if (resolved?.filePath) {
       try {
         const fileUrl = `${resolved.fileApi || TELEGRAM_FILE_API}/${resolved.filePath}`;
@@ -252,7 +280,6 @@ async function sendMusicToUserChat(chatId, song, caption, replyMarkup = null) {
       }
     }
 
-    // روش ۳: کپی پیام با کپشن مینی‌اپ
     if (song.from_chat_id && song.message_id) {
       try {
         const r4 = await axios.post(`${TELEGRAM_API}/copyMessage`, {
@@ -855,25 +882,27 @@ app.get('/api/songs', (req, res) => {
   });
 });
 
+// متن ترانه دقیق: فقط برای آهنگ‌های معروف و شناخته‌شده ثبت‌شده در دیتابیس جهانی
 app.get('/api/lyrics', async (req, res) => {
-  const title = String(req.query.title || '').trim();
-  const artist = String(req.query.artist || '').trim();
-  const cleanTitle = cleanDisplayText(title);
-  const cleanArtist = cleanDisplayText(artist);
+  const { artist, title } = extractArtistAndTitle(req.query.title, req.query.artist);
 
-  if (!cleanTitle && !cleanArtist) {
-    return res.status(400).json({ error: 'Title or artist required' });
+  if (!title || !artist || title.length < 2 || artist.length < 2 || /^(file|track|\d+)\b/i.test(title)) {
+    return res.json({ syncedLyrics: null, plainLyrics: null });
   }
 
-  const songKey = `${cleanArtist}_${cleanTitle}`.toLowerCase();
+  const songKey = `${artist}_${title}`.toLowerCase();
   const cached = DB.getCachedLyrics(songKey);
-  if (cached && (cached.syncedLyrics || cached.plainLyrics)) {
-    return res.json(cached);
+  if (cached) {
+    return res.json({
+      syncedLyrics: cached.syncedLyrics || null,
+      plainLyrics: cached.plainLyrics || null
+    });
   }
 
   try {
+    // فقط جستجوی دقیق (Exact Match) برای جلوگیری از متن‌های نامربوط برای آهنگ‌های ناشناس
     const lrclibResp = await axios.get('https://lrclib.net/api/get', {
-      params: { track_name: cleanTitle, artist_name: cleanArtist },
+      params: { track_name: title, artist_name: artist },
       timeout: 5000,
       headers: { 'User-Agent': 'GapMusic MiniApp (https://t.me/)' }
     });
@@ -887,23 +916,8 @@ app.get('/api/lyrics', async (req, res) => {
       return res.json({ syncedLyrics, plainLyrics });
     }
   } catch (err) {
-    try {
-      const searchResp = await axios.get('https://lrclib.net/api/search', {
-        params: { q: `${cleanArtist} ${cleanTitle}` },
-        timeout: 5000,
-        headers: { 'User-Agent': 'GapMusic MiniApp (https://t.me/)' }
-      });
-      const results = searchResp.data;
-      if (Array.isArray(results) && results.length > 0) {
-        const first = results[0];
-        const syncedLyrics = first.syncedLyrics || null;
-        const plainLyrics = first.plainLyrics || null;
-        if (syncedLyrics || plainLyrics) {
-          DB.saveCachedLyrics(songKey, syncedLyrics, plainLyrics);
-          return res.json({ syncedLyrics, plainLyrics });
-        }
-      }
-    } catch (e2) {}
+    // ذخیره نتیجه خالی در کش تا دوباره درخواست اضافه نزند
+    DB.saveCachedLyrics(songKey, '', '');
   }
 
   res.json({ syncedLyrics: null, plainLyrics: null });
@@ -961,55 +975,56 @@ app.delete('/api/admin/song/:id', (req, res) => {
   });
 });
 
-// دریافت کاور باکیفیت از iTunes + بک‌آپ Deezer برای تمام آهنگ‌ها
+// دریافت هوشمند کاور با تفکیک دقیق عنوان و خواننده (iTunes + Deezer)
 app.get('/api/cover', async (req, res) => {
-  const rawTitle = cleanDisplayText(String(req.query.title || '').trim());
-  const rawArtist = cleanDisplayText(String(req.query.artist || '').trim());
+  const { artist, title } = extractArtistAndTitle(req.query.title, req.query.artist);
 
-  const cleanTitle = rawTitle
-    .replace(/\b(official|audio|video|lyrics|remix|slowed|reverb|sped up|feat|ft|320|128|mp3|m4a)\b/gi, '')
-    .replace(/\(.*?\)|\[.*?\]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+  if (!title && !artist) return res.json({ artwork: null });
+  if (/^(file|track|\d+)\s*\d*$/i.test(title) && !artist) {
+    return res.json({ artwork: null });
+  }
 
-  const cleanArtist = (rawArtist === 'نامشخص' ? '' : rawArtist)
-    .replace(/\(.*?\)|\[.*?\]/g, '')
-    .split(/[&,xX،|]/)[0]
-    .trim();
+  const cacheKey = `${artist}_${title}`.toLowerCase();
+  if (COVER_CACHE.has(cacheKey)) return res.json({ artwork: COVER_CACHE.get(cacheKey) });
 
-  const query = `${cleanArtist} ${cleanTitle}`.trim();
-  if (!query) return res.json({ artwork: null });
-  if (COVER_CACHE.has(query)) return res.json({ artwork: COVER_CACHE.get(query) });
+  const queries = [];
+  if (artist && title) queries.push(`${artist} ${title}`);
+  if (title && title.length >= 3 && !/^(file|track|\d+)/i.test(title)) queries.push(title);
+  if (artist && artist.length >= 3) queries.push(artist);
 
   let artwork = null;
 
-  // منبع ۱: iTunes High-Res
-  try {
-    const resp = await axios.get('https://itunes.apple.com/search', {
-      params: { term: query, media: 'music', limit: 1 },
-      timeout: 4500
-    });
-    const results = resp.data?.results || [];
-    if (results.length > 0 && results[0].artworkUrl100) {
-      artwork = results[0].artworkUrl100.replace('100x100bb', '500x500bb');
-    }
-  } catch (e) {}
+  for (const q of queries) {
+    if (artwork) break;
 
-  // منبع ۲: Deezer API (بک‌آپ قوی برای آهنگ‌های ایرانی و ریمیکس)
-  if (!artwork) {
+    // منبع ۱: iTunes
+    try {
+      const resp = await axios.get('https://itunes.apple.com/search', {
+        params: { term: q, media: 'music', limit: 1 },
+        timeout: 4000
+      });
+      const results = resp.data?.results || [];
+      if (results.length > 0 && results[0].artworkUrl100) {
+        artwork = results[0].artworkUrl100.replace('100x100bb', '500x500bb');
+        break;
+      }
+    } catch (e) {}
+
+    // منبع ۲: Deezer
     try {
       const dzResp = await axios.get('https://api.deezer.com/search', {
-        params: { q: query, limit: 1 },
-        timeout: 4500
+        params: { q, limit: 1 },
+        timeout: 4000
       });
       const dzData = dzResp.data?.data || [];
       if (dzData.length > 0 && dzData[0].album) {
         artwork = dzData[0].album.cover_big || dzData[0].album.cover_medium || null;
+        if (artwork) break;
       }
     } catch (e2) {}
   }
 
-  COVER_CACHE.set(query, artwork);
+  COVER_CACHE.set(cacheKey, artwork);
   res.json({ artwork });
 });
 
@@ -1030,15 +1045,29 @@ app.post('/api/favorite/:id', (req, res) => {
   res.json({ status: 'ok', ...result });
 });
 
+// پخش شانسی مطمئن (انتخاب از میان آهنگ‌های دارای فایل معتبر و غیرتکراری)
 app.get('/api/random', (req, res) => {
-  const s = DB.getRandomSong();
-  if (!s) return res.status(404).json({ detail: 'آهنگی یافت نشد' });
+  const excludeId = parseInt(req.query.exclude_id, 10) || -1;
+  let chosen = null;
+
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const candidate = DB.getRandomSong();
+    if (!candidate) break;
+    if (candidate.id !== excludeId && (candidate.file_id || candidate.message_id)) {
+      chosen = candidate;
+      break;
+    }
+    if (!chosen) chosen = candidate;
+  }
+
+  if (!chosen) return res.status(404).json({ detail: 'آهنگی یافت نشد' });
   res.json({
-    uid: s.uid,
-    id: s.id,
-    title: s.title,
-    performer: s.performer,
-    likes: s.likes || 0
+    uid: chosen.uid,
+    id: chosen.id,
+    title: chosen.title,
+    performer: chosen.performer,
+    likes: chosen.likes || 0,
+    plays: chosen.plays || 0
   });
 });
 
