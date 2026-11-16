@@ -10,7 +10,7 @@ const DB = require('./db.js');
 const BOT_TOKEN = (process.env.BOT_TOKEN || '').trim();
 const STORAGE_BOT_TOKEN = (process.env.STORAGE_BOT_TOKEN || '').trim();
 const MINI_APP_URL = (process.env.MINI_APP_URL || '').replace(/\/$/, '').trim();
-const APP_VERSION = '2.2.0';
+const APP_VERSION = '2.3.0';
 const WEB_APP_URL = MINI_APP_URL
   ? (MINI_APP_URL.includes('?') ? `${MINI_APP_URL}&v=${APP_VERSION}` : `${MINI_APP_URL}?v=${APP_VERSION}`)
   : '';
@@ -22,7 +22,7 @@ const ADMIN_IDS = (process.env.ADMIN_IDS || '849152312')
 const GROUP_URL = (process.env.GROUP_URL || '').trim();
 
 if (!BOT_TOKEN) {
-  console.error('❌ خطا: متغیر محیطی BOT_TOKEN تنظیم نشده است!');
+  console.error('❌ خطا: متغیر محیطی BOT_TOKEN در Railway تنظیم نشده است!');
   process.exit(1);
 }
 
@@ -78,11 +78,9 @@ function resolveUserId(initData, fallbackId) {
   return null;
 }
 
-// حل هوشمند و تضمینی دسترسی به فایل صوتی
 async function resolvePlayableFile(song, fallbackChatId = null) {
   let lastError = 'اطلاعات فایل ناقص است';
 
-  // ۱. بررسی file_id ثبت‌شده با ربات فعال
   if (song.file_id && String(song.file_id).trim()) {
     try {
       const check = await axios.get(`${TELEGRAM_API}/getFile`, {
@@ -97,7 +95,6 @@ async function resolvePlayableFile(song, fallbackChatId = null) {
     }
   }
 
-  // ۲. دسترسی به انبار فایل‌ها (STORAGE_BOT_TOKEN)
   if (STORAGE_BOT_TOKEN && STORAGE_BOT_TOKEN !== BOT_TOKEN && song.file_id && String(song.file_id).trim()) {
     try {
       const checkStorage = await axios.get(`https://api.telegram.org/bot${STORAGE_BOT_TOKEN}/getFile`, {
@@ -113,7 +110,6 @@ async function resolvePlayableFile(song, fallbackChatId = null) {
     } catch (eStorage) {}
   }
 
-  // ۳. استخراج file_id جدید با فوروارد پیام از چت مبدا
   const forwardDests = [fallbackChatId, ...ADMIN_IDS].filter(Boolean);
   if (song.from_chat_id && song.message_id && forwardDests.length > 0) {
     let chatId = String(song.from_chat_id).trim();
@@ -170,7 +166,6 @@ async function resolvePlayableFile(song, fallbackChatId = null) {
   return { error: lastError };
 }
 
-// اطلاع‌رسانی خودکار به کاربرانی که درخواست داده بودند
 async function notifyFulfilledRequests(song) {
   const pending = DB.getPendingRequests();
   if (!pending.length) return;
@@ -224,6 +219,10 @@ async function sendAutoDeleteReply(ctx, text, delayMs = 5000) {
 // ---------------------------------------------------------------------------
 const bot = new Telegraf(BOT_TOKEN);
 const userSessions = new Map();
+
+bot.catch((err, ctx) => {
+  console.error('❌ خطای داخلی Telegraf:', err);
+});
 
 function buildMainMenu(userId) {
   const stats = DB.getStats();
@@ -556,7 +555,6 @@ bot.action(/^page_(\d+)$/, async (ctx) => {
   await ctx.answerCbQuery();
 });
 
-// دریافت فایل صوتی جدید و ذخیره در SQLite
 bot.on(['audio', 'document', 'channel_post'], async (ctx, next) => {
   const msg = ctx.message || ctx.channelPost;
   if (!msg) return next();
@@ -688,15 +686,29 @@ bot.on('inline_query', async (ctx) => {
 // Express Server & APIs
 // ---------------------------------------------------------------------------
 const app = express();
-app.use(express.json());
 
-// اتصال مستقیم Webhook به Express (بدون تداخل 409 Conflict)
+// اتصال Webhook حتماً باید قبل از express.json() باشد!
 if (MINI_APP_URL && MINI_APP_URL.startsWith('https://')) {
   app.use(bot.webhookCallback(WEBHOOK_PATH));
 }
 
+app.use(express.json());
 app.use(express.static(path.join(__dirname, 'templates')));
 app.use(express.static(__dirname));
+
+// مسیر عیب‌یابی برای بررسی وضعیت اتصال Webhook به تلگرام
+app.get('/webhook-status', async (req, res) => {
+  try {
+    const info = await axios.get(`${TELEGRAM_API}/getWebhookInfo`);
+    res.json({
+      bot_username: BOT_USERNAME,
+      configured_mini_app_url: MINI_APP_URL,
+      telegram_webhook_info: info.data.result
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.response?.data || e.message });
+  }
+});
 
 app.get('/', (req, res) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -1095,7 +1107,6 @@ app.listen(PORT, '0.0.0.0', async () => {
     } catch (e) {}
   }
 
-  // اگر دامنه HTTPS روی Railway تنظیم شده باشد از Webhook استفاده می‌شود (بدون خطای 409)
   if (MINI_APP_URL && MINI_APP_URL.startsWith('https://')) {
     try {
       const fullWebhookUrl = `${MINI_APP_URL}${WEBHOOK_PATH}`;
