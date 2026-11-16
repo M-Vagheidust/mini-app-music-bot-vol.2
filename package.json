@@ -1,6 +1,6 @@
 {
   "name": "gapmusic-miniapp-bot",
-  "version": "2.2.0",
+  "version": "2.4.0",
   "description": "GapMusic Telegram Bot & Mini App (Node.js Edition)",
   "main": "index.js",
   "scripts": {
@@ -10,6 +10,7 @@
     "express": "^4.21.1",
     "telegraf": "^4.16.3",
     "axios": "^1.7.7",
+    "form-data": "^4.0.1",
     "dotenv": "^16.4.5"
   },
   "engines": {
