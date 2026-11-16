@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const { Telegraf, Markup } = require('telegraf');
 const axios = require('axios');
+const FormData = require('form-data');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
@@ -11,7 +12,7 @@ const BOT_TOKEN = (process.env.BOT_TOKEN || '').trim();
 const STORAGE_BOT_TOKEN = (process.env.STORAGE_BOT_TOKEN || '').trim();
 let rawUrl = (process.env.MINI_APP_URL || '').replace(/\/$/, '').trim();
 const MINI_APP_URL = rawUrl ? (rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`) : '';
-const APP_VERSION = '2.3.0';
+const APP_VERSION = '2.4.0';
 const WEB_APP_URL = MINI_APP_URL
   ? (MINI_APP_URL.includes('?') ? `${MINI_APP_URL}&v=${APP_VERSION}` : `${MINI_APP_URL}?v=${APP_VERSION}`)
   : '';
@@ -79,9 +80,11 @@ function resolveUserId(initData, fallbackId) {
   return null;
 }
 
+// پیدا کردن مسیر قابل دانلود فایل از ربات فعلی یا ربات انبار یا چت مبدا
 async function resolvePlayableFile(song, fallbackChatId = null) {
   let lastError = 'اطلاعات فایل ناقص است';
 
+  // ۱. بررسی file_id با ربات فعلی
   if (song.file_id && String(song.file_id).trim()) {
     try {
       const check = await axios.get(`${TELEGRAM_API}/getFile`, {
@@ -89,13 +92,19 @@ async function resolvePlayableFile(song, fallbackChatId = null) {
         timeout: 10000
       });
       if (check.data?.ok && check.data?.result?.file_path) {
-        return { fileId: song.file_id, filePath: check.data.result.file_path, fileApi: TELEGRAM_FILE_API };
+        return {
+          fileId: song.file_id,
+          isSameBot: true,
+          filePath: check.data.result.file_path,
+          fileApi: TELEGRAM_FILE_API
+        };
       }
     } catch (e) {
       lastError = e.response?.data?.description || e.message;
     }
   }
 
+  // ۲. بررسی file_id با ربات انبار (STORAGE_BOT_TOKEN)
   if (STORAGE_BOT_TOKEN && STORAGE_BOT_TOKEN !== BOT_TOKEN && song.file_id && String(song.file_id).trim()) {
     try {
       const checkStorage = await axios.get(`https://api.telegram.org/bot${STORAGE_BOT_TOKEN}/getFile`, {
@@ -104,13 +113,18 @@ async function resolvePlayableFile(song, fallbackChatId = null) {
       });
       if (checkStorage.data?.ok && checkStorage.data?.result?.file_path) {
         return {
+          fileId: song.file_id,
+          isSameBot: false,
           filePath: checkStorage.data.result.file_path,
           fileApi: `https://api.telegram.org/file/bot${STORAGE_BOT_TOKEN}`
         };
       }
-    } catch (eStorage) {}
+    } catch (eStorage) {
+      lastError = eStorage.response?.data?.description || eStorage.message;
+    }
   }
 
+  // ۳. استخراج فایل از طریق forwardMessage از چت مبدا
   const forwardDests = [fallbackChatId, ...ADMIN_IDS].filter(Boolean);
   if (song.from_chat_id && song.message_id && forwardDests.length > 0) {
     let chatId = String(song.from_chat_id).trim();
@@ -145,15 +159,11 @@ async function resolvePlayableFile(song, fallbackChatId = null) {
               params: { file_id: audioObj.file_id },
               timeout: 10000
             });
-            if (check2.data?.ok && check2.data?.result?.file_path) {
-              return {
-                fileId: audioObj.file_id,
-                filePath: check2.data.result.file_path,
-                alreadyDelivered: (destChat === fallbackChatId)
-              };
-            }
             return {
               fileId: audioObj.file_id,
+              isSameBot: true,
+              filePath: check2.data?.result?.file_path || null,
+              fileApi: TELEGRAM_FILE_API,
               alreadyDelivered: (destChat === fallbackChatId)
             };
           }
@@ -165,6 +175,92 @@ async function resolvePlayableFile(song, fallbackChatId = null) {
   }
 
   return { error: lastError };
+}
+
+// تابع یکپارچه ارسال موزیک به پی‌وی کاربر (با پشتیبانی از استریم بین دو ربات و ذخیره file_id جدید)
+async function sendMusicToUserChat(chatId, song, caption, replyMarkup = null) {
+  const resolved = await resolvePlayableFile(song, chatId);
+
+  if (resolved?.alreadyDelivered) {
+    return { ok: true };
+  }
+
+  const basePayload = { chat_id: chatId, caption };
+  if (replyMarkup) basePayload.reply_markup = replyMarkup;
+
+  // روش ۱: اگر file_id متعلق به همین ربات است، مستقیم بفرست
+  if (resolved?.fileId && resolved?.isSameBot) {
+    try {
+      const r = await axios.post(`${TELEGRAM_API}/sendAudio`, {
+        ...basePayload,
+        audio: resolved.fileId
+      });
+      if (r.data?.ok) return { ok: true };
+    } catch (e1) {
+      try {
+        const r2 = await axios.post(`${TELEGRAM_API}/sendDocument`, {
+          ...basePayload,
+          document: resolved.fileId
+        });
+        if (r2.data?.ok) return { ok: true };
+      } catch (e2) {}
+    }
+  }
+
+  // روش ۲: استریم فایل از سرور تلگرام (انبار) و آپلود مستقیم به پی‌وی کاربر + کش کردن file_id جدید
+  if (resolved?.filePath) {
+    try {
+      const fileUrl = `${resolved.fileApi || TELEGRAM_FILE_API}/${resolved.filePath}`;
+      const streamResp = await axios.get(fileUrl, { responseType: 'stream', timeout: 45000 });
+
+      const ext = resolved.filePath.endsWith('.m4a') ? 'm4a' : 'mp3';
+      const safeFileName = `${song.performer} - ${song.title}.${ext}`.replace(/[\\/:*?"<>|]/g, '_');
+
+      const form = new FormData();
+      form.append('chat_id', String(chatId));
+      form.append('caption', caption);
+      form.append('title', song.title);
+      form.append('performer', song.performer);
+      if (replyMarkup) {
+        form.append('reply_markup', JSON.stringify(replyMarkup));
+      }
+      form.append('audio', streamResp.data, {
+        filename: safeFileName,
+        contentType: ext === 'm4a' ? 'audio/mp4' : 'audio/mpeg'
+      });
+
+      const uploadResp = await axios.post(`${TELEGRAM_API}/sendAudio`, form, {
+        headers: form.getHeaders(),
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+        timeout: 60000
+      });
+
+      if (uploadResp.data?.ok) {
+        const newFileId = uploadResp.data.result?.audio?.file_id || uploadResp.data.result?.document?.file_id;
+        if (newFileId) {
+          DB.updateSongFile(song.id, { file_id: newFileId });
+        }
+        return { ok: true };
+      }
+    } catch (eStream) {
+      console.error('Stream upload to Telegram failed:', eStream.response?.data || eStream.message);
+    }
+  }
+
+  // روش ۳: کپی پیام از چت مبدا
+  if (song.from_chat_id && song.message_id) {
+    try {
+      const r4 = await axios.post(`${TELEGRAM_API}/copyMessage`, {
+        ...basePayload,
+        from_chat_id: song.from_chat_id,
+        message_id: song.message_id
+      });
+      if (r4.data?.ok) return { ok: true };
+    } catch (e4) {}
+  }
+
+  return { ok: false, error: resolved?.error || 'فایل در تلگرام در دسترس نیست' };
 }
 
 async function notifyFulfilledRequests(song) {
@@ -221,8 +317,8 @@ async function sendAutoDeleteReply(ctx, text, delayMs = 5000) {
 const bot = new Telegraf(BOT_TOKEN);
 const userSessions = new Map();
 
-bot.catch((err, ctx) => {
-  console.error('❌ خطای داخلی Telegraf:', err);
+bot.catch((err) => {
+  console.error('❌ خطای داخلی Telegraf:', err.message);
 });
 
 function buildMainMenu(userId) {
@@ -309,50 +405,15 @@ async function sendSongToChat(ctx, chatId, song, userId) {
   }
 
   const caption = `🎵 ${song.performer} - ${song.title}\n▶️ دریافت: ${song.plays + 1} مرتبه | 🆔 #${song.id}`;
-  const extra = { caption, ...Markup.inlineKeyboard(rows) };
+  const res = await sendMusicToUserChat(chatId, song, caption, Markup.inlineKeyboard(rows).reply_markup);
 
-  const resolved = await resolvePlayableFile(song, chatId);
-
-  if (resolved?.alreadyDelivered) {
-    return true;
+  if (!res.ok) {
+    await ctx.reply(
+      `⚠️ متأسفانه فایل این موزیک در تلگرام در دسترس نیست.\nمی‌توانید آن را از طریق دکمه «🎧 پخش آنلاین در مینی‌اپ» گوش دهید.`
+    );
+    return false;
   }
-
-  if (resolved?.fileId) {
-    try {
-      await ctx.telegram.sendAudio(chatId, resolved.fileId, extra);
-      return true;
-    } catch (e1) {
-      try {
-        await ctx.telegram.sendDocument(chatId, resolved.fileId, extra);
-        return true;
-      } catch (e2) {}
-    }
-  }
-
-  if (resolved?.filePath) {
-    try {
-      const fileUrl = `${resolved.fileApi || TELEGRAM_FILE_API}/${resolved.filePath}`;
-      const sent = await ctx.telegram.sendAudio(chatId, { url: fileUrl }, extra);
-      if (sent?.audio?.file_id) {
-        DB.updateSongFile(song.id, { file_id: sent.audio.file_id });
-      }
-      return true;
-    } catch (eUrl) {
-      console.error('Send via URL in bot failed:', eUrl.response?.data || eUrl.message);
-    }
-  }
-
-  if (song.from_chat_id && song.message_id) {
-    try {
-      await ctx.telegram.copyMessage(chatId, song.from_chat_id, song.message_id, extra);
-      return true;
-    } catch (eCopy) {}
-  }
-
-  await ctx.reply(
-    `⚠️ متأسفانه فایل این موزیک در تلگرام در دسترس نیست.\nمی‌توانید آن را از طریق دکمه «🎧 پخش آنلاین در مینی‌اپ» گوش دهید یا دانلود کنید.`
-  );
-  return false;
+  return true;
 }
 
 bot.start(async (ctx) => {
@@ -372,12 +433,8 @@ bot.start(async (ctx) => {
     }
 
     const waitMsg = await ctx.reply(`⏳ در حال آماده‌سازی و ارسال «${song.title}»...`);
-    const ok = await sendSongToChat(ctx, ctx.chat.id, song, ctx.from.id);
+    await sendSongToChat(ctx, ctx.chat.id, song, ctx.from.id);
     await ctx.telegram.deleteMessage(ctx.chat.id, waitMsg.message_id).catch(() => {});
-
-    if (ok) return;
-
-    await ctx.reply('⚠️ دسترسی به فایل این موزیک برقرار نشد.');
     return;
   }
 
@@ -688,7 +745,6 @@ bot.on('inline_query', async (ctx) => {
 // ---------------------------------------------------------------------------
 const app = express();
 
-// اتصال Webhook حتماً باید قبل از express.json() باشد!
 if (MINI_APP_URL && MINI_APP_URL.startsWith('https://')) {
   app.use(bot.webhookCallback(WEBHOOK_PATH));
 }
@@ -697,13 +753,13 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'templates')));
 app.use(express.static(__dirname));
 
-// مسیر عیب‌یابی برای بررسی وضعیت اتصال Webhook به تلگرام
 app.get('/webhook-status', async (req, res) => {
   try {
     const info = await axios.get(`${TELEGRAM_API}/getWebhookInfo`);
     res.json({
       bot_username: BOT_USERNAME,
       configured_mini_app_url: MINI_APP_URL,
+      stats: DB.getStats(),
       telegram_webhook_info: info.data.result
     });
   } catch (e) {
@@ -952,6 +1008,7 @@ app.get('/api/random', (req, res) => {
   });
 });
 
+// استریم صوتی و دانلود مستقیم در مینی‌اپ
 app.get('/api/stream/:uid', async (req, res) => {
   const song = DB.getSongByUid(req.params.uid);
   if (!song) return res.status(404).json({ detail: 'موزیک یافت نشد' });
@@ -1002,6 +1059,7 @@ app.get('/api/stream/:uid', async (req, res) => {
   }
 });
 
+// ارسال مستقیم موزیک از مینی‌اپ به پی‌وی تلگرام کاربر
 app.post('/api/send/:uid', async (req, res) => {
   const song = DB.getSongByUid(req.params.uid);
   if (!song) return res.status(404).json({ detail: 'موزیک یافت نشد' });
@@ -1018,67 +1076,17 @@ app.post('/api/send/:uid', async (req, res) => {
   }
 
   const caption = `🎵 ${song.performer} - ${song.title}\n🎧 ارسال شده از مینی‌اپ GapMusic`;
-  const resolved = await resolvePlayableFile(song, userId);
+  const result = await sendMusicToUserChat(userId, song, caption);
 
-  if (resolved?.alreadyDelivered) {
+  if (result.ok) {
+    DB.incrementPlays(song.id);
     return res.json({ status: 'ok' });
-  }
-
-  if (resolved?.fileId) {
-    try {
-      const r = await axios.post(`${TELEGRAM_API}/sendAudio`, {
-        chat_id: userId,
-        audio: resolved.fileId,
-        caption
-      });
-      if (r.data.ok) return res.json({ status: 'ok' });
-    } catch (e1) {
-      try {
-        const r2 = await axios.post(`${TELEGRAM_API}/sendDocument`, {
-          chat_id: userId,
-          document: resolved.fileId,
-          caption
-        });
-        if (r2.data.ok) return res.json({ status: 'ok' });
-      } catch (e2) {}
-    }
-  }
-
-  if (resolved?.filePath) {
-    try {
-      const fileUrl = `${resolved.fileApi || TELEGRAM_FILE_API}/${resolved.filePath}`;
-      const r3 = await axios.post(`${TELEGRAM_API}/sendAudio`, {
-        chat_id: userId,
-        audio: fileUrl,
-        caption
-      });
-      if (r3.data.ok) {
-        if (r3.data.result?.audio?.file_id) {
-          DB.updateSongFile(song.id, { file_id: r3.data.result.audio.file_id });
-        }
-        return res.json({ status: 'ok' });
-      }
-    } catch (e3) {
-      console.error('Send via URL failed:', e3.response?.data || e3.message);
-    }
-  }
-
-  if (song.from_chat_id && song.message_id) {
-    try {
-      const r4 = await axios.post(`${TELEGRAM_API}/copyMessage`, {
-        chat_id: userId,
-        from_chat_id: song.from_chat_id,
-        message_id: song.message_id,
-        caption
-      });
-      if (r4.data.ok) return res.json({ status: 'ok' });
-    } catch (e4) {}
   }
 
   res.status(400).json({
     need_start: true,
     deep_link: deepLink,
-    detail: `عدم دسترسی به فایل تلگرام: ${resolved?.error || 'فایل در دسترس نیست'}`
+    detail: `عدم دسترسی به فایل تلگرام: ${result.error}`
   });
 });
 
