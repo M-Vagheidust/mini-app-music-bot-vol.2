@@ -108,8 +108,8 @@ function initDatabase() {
     createSchema(database);
   }
 
-  // ادغام خودکار فایل JSON با SQLite در صورت وجود
-  const jsonCandidates = ['songs_db (2).json', 'songs_db.json'];
+  // انتقال کامل اطلاعات از songs_db.json به دیتابیس SQLite
+  const jsonCandidates = ['songs_db.json', 'song-db.json', 'songs_db (2).json'];
   const foundJson = jsonCandidates.find(name => fs.existsSync(path.join(__dirname, name)));
 
   if (foundJson) {
@@ -119,62 +119,60 @@ function initDatabase() {
       const songsList = JSON.parse(raw);
 
       if (Array.isArray(songsList) && songsList.length > 0) {
-        const currentCount = database.prepare('SELECT COUNT(*) as c FROM songs').get()?.c || 0;
-        // اگر دیتابیس خالی است یا تعداد آهنگ‌های JSON بیشتر/متفاوت است، ادغام را انجام بده
-        if (currentCount < songsList.length) {
-          console.log(`🔄 در حال ادغام خودکار ${songsList.length} آهنگ از ${foundJson} به SQLite...`);
-          const upsert = database.prepare(`
-            INSERT INTO songs (
-              id, uid, from_chat_id, message_id, file_id, file_unique_id,
-              title, performer, search_text, media_type, plays, likes, available
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET
-              uid = excluded.uid,
-              from_chat_id = COALESCE(excluded.from_chat_id, songs.from_chat_id),
-              message_id = COALESCE(excluded.message_id, songs.message_id),
-              file_id = CASE WHEN excluded.file_id != '' THEN excluded.file_id ELSE songs.file_id END,
-              file_unique_id = CASE WHEN excluded.file_unique_id != '' THEN excluded.file_unique_id ELSE songs.file_unique_id END,
-              title = excluded.title,
-              performer = excluded.performer,
-              search_text = excluded.search_text,
-              plays = MAX(songs.plays, excluded.plays),
-              likes = MAX(songs.likes, excluded.likes),
-              available = excluded.available
-          `);
+        console.log(`🔄 در حال انتقال ${songsList.length} ترک از ${foundJson} به دیتابیس SQLite...`);
+        const upsert = database.prepare(`
+          INSERT INTO songs (
+            id, uid, from_chat_id, message_id, file_id, file_unique_id,
+            title, performer, search_text, media_type, plays, likes, available
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(id) DO UPDATE SET
+            uid = excluded.uid,
+            from_chat_id = COALESCE(excluded.from_chat_id, songs.from_chat_id),
+            message_id = COALESCE(excluded.message_id, songs.message_id),
+            file_id = CASE WHEN excluded.file_id != '' THEN excluded.file_id ELSE songs.file_id END,
+            file_unique_id = CASE WHEN excluded.file_unique_id != '' THEN excluded.file_unique_id ELSE songs.file_unique_id END,
+            title = excluded.title,
+            performer = excluded.performer,
+            search_text = excluded.search_text,
+            plays = MAX(songs.plays, excluded.plays),
+            likes = MAX(songs.likes, excluded.likes),
+            available = excluded.available
+        `);
 
-          database.exec('BEGIN TRANSACTION;');
-          for (const s of songsList) {
-            if (!s || typeof s.id !== 'number') continue;
-            upsert.run(
-              s.id,
-              String(s.uid || `${s.id}_${s.message_id || Date.now()}`),
-              s.from_chat_id !== null && s.from_chat_id !== undefined ? String(s.from_chat_id) : null,
-              s.message_id !== null && s.message_id !== undefined ? parseInt(s.message_id, 10) : null,
-              String(s.file_id || '').trim(),
-              String(s.file_unique_id || '').trim(),
-              String(s.title || 'نامشخص').trim(),
-              String(s.performer || 'نامشخص').trim(),
-              String(s.search_text || `${s.title} ${s.performer}`).toLowerCase(),
-              String(s.media_type || 'audio').trim(),
-              parseInt(s.plays, 10) || 0,
-              parseInt(s.likes, 10) || 0,
-              s.available === false || s.available === 0 ? 0 : 1
-            );
-          }
-          database.exec('COMMIT;');
-
-          // بازسازی ایندکس FTS5
-          database.exec('DELETE FROM songs_fts;');
-          database.exec(`
-            INSERT INTO songs_fts(id, title, performer, search_text)
-            SELECT id, title, performer, search_text FROM songs;
-          `);
-          console.log(`✅ ادغام با موفقیت انجام شد! کل ترک‌های فعال: ${database.prepare('SELECT COUNT(*) as c FROM songs WHERE available = 1').get().c}`);
+        database.exec('BEGIN TRANSACTION;');
+        for (const s of songsList) {
+          if (!s || typeof s.id !== 'number') continue;
+          upsert.run(
+            s.id,
+            String(s.uid || `${s.id}_${s.message_id || Date.now()}`),
+            s.from_chat_id !== null && s.from_chat_id !== undefined ? String(s.from_chat_id) : null,
+            s.message_id !== null && s.message_id !== undefined ? parseInt(s.message_id, 10) : null,
+            String(s.file_id || '').trim(),
+            String(s.file_unique_id || '').trim(),
+            String(s.title || 'نامشخص').trim(),
+            String(s.performer || 'نامشخص').trim(),
+            String(s.search_text || `${s.title} ${s.performer}`).toLowerCase(),
+            String(s.media_type || 'audio').trim(),
+            parseInt(s.plays, 10) || 0,
+            parseInt(s.likes, 10) || 0,
+            s.available === false || s.available === 0 ? 0 : 1
+          );
         }
+        database.exec('COMMIT;');
+
+        // بازسازی کامل ایندکس جستجوی فوق‌سریع FTS5
+        database.exec('DELETE FROM songs_fts;');
+        database.exec(`
+          INSERT INTO songs_fts(id, title, performer, search_text)
+          SELECT id, title, performer, search_text FROM songs;
+        `);
+
+        const totalActive = database.prepare('SELECT COUNT(*) as c FROM songs WHERE available = 1').get().c;
+        console.log(`✅ انتقال کامل شد! مجموع ترک‌های فعال در SQLite: ${totalActive}`);
       }
     } catch (mergeErr) {
       try { database.exec('ROLLBACK;'); } catch (e) {}
-      console.error('⚠️ خطا در ادغام JSON:', mergeErr.message);
+      console.error('⚠️ خطا در انتقال JSON:', mergeErr.message);
     }
   }
 
@@ -183,7 +181,7 @@ function initDatabase() {
 
 const db = initDatabase();
 
-// Prepared Statements
+// Prepared Statements for high performance
 const stmtGetSongById = db.prepare('SELECT * FROM songs WHERE id = ?');
 const stmtGetSongByUid = db.prepare('SELECT * FROM songs WHERE uid = ? OR id = ?');
 const stmtIncrementPlays = db.prepare('UPDATE songs SET plays = plays + 1 WHERE id = ?');
@@ -206,6 +204,7 @@ const stmtUpsertUser = db.prepare('INSERT INTO users (id, name, username, joined
 const stmtGetLyrics = db.prepare('SELECT synced_lyrics, plain_lyrics FROM lyrics_cache WHERE song_key = ?');
 const stmtSaveLyrics = db.prepare('INSERT OR REPLACE INTO lyrics_cache (song_key, synced_lyrics, plain_lyrics, cached_at) VALUES (?, ?, ?, ?)');
 
+// Bilingual aliases dictionary
 const BILINGUAL_ALIASES = [
   ['tataloo', 'تتلو', 'امیر تتلو'],
   ['yas', 'یاس'],
