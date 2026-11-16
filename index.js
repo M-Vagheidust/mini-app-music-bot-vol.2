@@ -12,7 +12,7 @@ const BOT_TOKEN = (process.env.BOT_TOKEN || '').trim();
 const STORAGE_BOT_TOKEN = (process.env.STORAGE_BOT_TOKEN || '').trim();
 let rawUrl = (process.env.MINI_APP_URL || '').replace(/\/$/, '').trim();
 const MINI_APP_URL = rawUrl ? (rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`) : '';
-const APP_VERSION = '2.5.0';
+const APP_VERSION = '2.7.0';
 const WEB_APP_URL = MINI_APP_URL
   ? (MINI_APP_URL.includes('?') ? `${MINI_APP_URL}&v=${APP_VERSION}` : `${MINI_APP_URL}?v=${APP_VERSION}`)
   : '';
@@ -35,7 +35,7 @@ const WEBHOOK_PATH = `/telegraf/${WEBHOOK_SECRET}`;
 
 let BOT_USERNAME = '';
 const COVER_CACHE = new Map();
-const activeSends = new Set(); // جلوگیری از ارسال تکراری همزمان
+const activeSends = new Set();
 
 function isAdmin(userId) {
   return ADMIN_IDS.includes(Number(userId));
@@ -81,7 +81,7 @@ function resolveUserId(initData, fallbackId) {
   return null;
 }
 
-// استخراج فایل صوتی بدون ارسال پیام اضافه به کاربر
+// استخراج مسیر فایل بدون هیچ‌گونه ارسال پیام اضافه به کاربر
 async function resolvePlayableFile(song) {
   let lastError = 'اطلاعات فایل ناقص است';
 
@@ -125,7 +125,7 @@ async function resolvePlayableFile(song) {
     }
   }
 
-  // ۳. استخراج بی‌صدا از چت مبدأ فقط از طریق ادمین (و حذف فوری پیام موقت از چت ادمین)
+  // ۳. استخراج بی‌صدا از چت مبدأ فقط از طریق ادمین و پاک کردن فوری پیام موقت
   if (song.from_chat_id && song.message_id && ADMIN_IDS.length > 0) {
     let chatId = String(song.from_chat_id).trim();
     const candidates = [chatId];
@@ -148,7 +148,6 @@ async function resolvePlayableFile(song) {
           const msg = fwd.data?.result;
           const audioObj = msg?.audio || msg?.document || msg?.voice;
 
-          // پاک کردن فوری پیام موقت از چت ادمین
           if (msg?.message_id) {
             axios.post(`${TELEGRAM_API}/deleteMessage`, {
               chat_id: adminChat,
@@ -180,7 +179,7 @@ async function resolvePlayableFile(song) {
   return { error: lastError };
 }
 
-// ارسال یک‌باره و قطعی موزیک به پی‌وی کاربر با کپشن مینی‌اپ
+// ارسال یک‌باره و تضمینی موزیک به پی‌وی کاربر با کپشن مینی‌اپ
 async function sendMusicToUserChat(chatId, song, caption, replyMarkup = null) {
   const lockKey = `${chatId}_${song.id}`;
   if (activeSends.has(lockKey)) {
@@ -253,7 +252,7 @@ async function sendMusicToUserChat(chatId, song, caption, replyMarkup = null) {
       }
     }
 
-    // روش ۳: کپی پیام با کپشن جدید (فقط اگر روش ۱ و ۲ ممکن نبود)
+    // روش ۳: کپی پیام با کپشن مینی‌اپ
     if (song.from_chat_id && song.message_id) {
       try {
         const r4 = await axios.post(`${TELEGRAM_API}/copyMessage`, {
@@ -1016,7 +1015,6 @@ app.get('/api/random', (req, res) => {
   });
 });
 
-// استریم صوتی و دانلود مستقیم در مینی‌اپ
 app.get('/api/stream/:uid', async (req, res) => {
   const song = DB.getSongByUid(req.params.uid);
   if (!song) return res.status(404).json({ detail: 'موزیک یافت نشد' });
@@ -1067,7 +1065,6 @@ app.get('/api/stream/:uid', async (req, res) => {
   }
 });
 
-// ارسال یک‌باره موزیک از مینی‌اپ به پی‌وی تلگرام کاربر
 app.post('/api/send/:uid', async (req, res) => {
   const song = DB.getSongByUid(req.params.uid);
   if (!song) return res.status(404).json({ detail: 'موزیک یافت نشد' });
@@ -1091,7 +1088,7 @@ app.post('/api/send/:uid', async (req, res) => {
     return res.json({ status: 'ok' });
   }
 
-  res.status(400).json({
+  return res.status(400).json({
     need_start: true,
     deep_link: deepLink,
     detail: `عدم دسترسی به فایل تلگرام: ${result.error}`
