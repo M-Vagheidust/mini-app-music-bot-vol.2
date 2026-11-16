@@ -9,7 +9,8 @@ const DB = require('./db.js');
 
 const BOT_TOKEN = (process.env.BOT_TOKEN || '').trim();
 const STORAGE_BOT_TOKEN = (process.env.STORAGE_BOT_TOKEN || '').trim();
-const MINI_APP_URL = (process.env.MINI_APP_URL || '').replace(/\/$/, '').trim();
+let rawUrl = (process.env.MINI_APP_URL || '').replace(/\/$/, '').trim();
+const MINI_APP_URL = rawUrl ? (rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`) : '';
 const APP_VERSION = '2.3.0';
 const WEB_APP_URL = MINI_APP_URL
   ? (MINI_APP_URL.includes('?') ? `${MINI_APP_URL}&v=${APP_VERSION}` : `${MINI_APP_URL}?v=${APP_VERSION}`)
