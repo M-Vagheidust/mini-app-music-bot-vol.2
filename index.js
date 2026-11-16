@@ -12,7 +12,7 @@ const BOT_TOKEN = (process.env.BOT_TOKEN || '').trim();
 const STORAGE_BOT_TOKEN = (process.env.STORAGE_BOT_TOKEN || '').trim();
 let rawUrl = (process.env.MINI_APP_URL || '').replace(/\/$/, '').trim();
 const MINI_APP_URL = rawUrl ? (rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`) : '';
-const APP_VERSION = '2.7.0';
+const APP_VERSION = '2.8.0';
 const WEB_APP_URL = MINI_APP_URL
   ? (MINI_APP_URL.includes('?') ? `${MINI_APP_URL}&v=${APP_VERSION}` : `${MINI_APP_URL}?v=${APP_VERSION}`)
   : '';
@@ -961,29 +961,56 @@ app.delete('/api/admin/song/:id', (req, res) => {
   });
 });
 
+// دریافت کاور باکیفیت از iTunes + بک‌آپ Deezer برای تمام آهنگ‌ها
 app.get('/api/cover', async (req, res) => {
-  const title = String(req.query.title || '').trim();
-  const artist = String(req.query.artist || '').trim();
-  const query = `${artist !== 'نامشخص' ? artist : ''} ${title !== 'نامشخص' ? title : ''}`.trim();
+  const rawTitle = cleanDisplayText(String(req.query.title || '').trim());
+  const rawArtist = cleanDisplayText(String(req.query.artist || '').trim());
 
+  const cleanTitle = rawTitle
+    .replace(/\b(official|audio|video|lyrics|remix|slowed|reverb|sped up|feat|ft|320|128|mp3|m4a)\b/gi, '')
+    .replace(/\(.*?\)|\[.*?\]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const cleanArtist = (rawArtist === 'نامشخص' ? '' : rawArtist)
+    .replace(/\(.*?\)|\[.*?\]/g, '')
+    .split(/[&,xX،|]/)[0]
+    .trim();
+
+  const query = `${cleanArtist} ${cleanTitle}`.trim();
   if (!query) return res.json({ artwork: null });
   if (COVER_CACHE.has(query)) return res.json({ artwork: COVER_CACHE.get(query) });
 
+  let artwork = null;
+
+  // منبع ۱: iTunes High-Res
   try {
     const resp = await axios.get('https://itunes.apple.com/search', {
       params: { term: query, media: 'music', limit: 1 },
-      timeout: 5000
+      timeout: 4500
     });
     const results = resp.data?.results || [];
-    let artwork = null;
     if (results.length > 0 && results[0].artworkUrl100) {
       artwork = results[0].artworkUrl100.replace('100x100bb', '500x500bb');
     }
-    COVER_CACHE.set(query, artwork);
-    res.json({ artwork });
-  } catch (e) {
-    res.json({ artwork: null });
+  } catch (e) {}
+
+  // منبع ۲: Deezer API (بک‌آپ قوی برای آهنگ‌های ایرانی و ریمیکس)
+  if (!artwork) {
+    try {
+      const dzResp = await axios.get('https://api.deezer.com/search', {
+        params: { q: query, limit: 1 },
+        timeout: 4500
+      });
+      const dzData = dzResp.data?.data || [];
+      if (dzData.length > 0 && dzData[0].album) {
+        artwork = dzData[0].album.cover_big || dzData[0].album.cover_medium || null;
+      }
+    } catch (e2) {}
   }
+
+  COVER_CACHE.set(query, artwork);
+  res.json({ artwork });
 });
 
 app.get('/api/favorites', (req, res) => {
