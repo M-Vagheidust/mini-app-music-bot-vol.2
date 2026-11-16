@@ -5,7 +5,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>GapMusic • Neo-Tokyo Edition</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script>
@@ -18,7 +18,7 @@
   <style>
     :root {
       --bg: #07090e;
-      --surface: rgba(14, 18, 26, 0.82);
+      --surface: rgba(14, 18, 26, 0.85);
       --cyan: #00f5d4;
       --cyan-glow: rgba(0, 245, 212, 0.48);
       --cyan-soft: rgba(0, 245, 212, 0.14);
@@ -44,11 +44,11 @@
     }
 
     body {
-      padding-bottom: 145px;
+      padding-bottom: calc(138px + env(safe-area-inset-bottom, 0px));
       background: radial-gradient(circle at 50% 0%, rgba(0, 245, 212, 0.12) 0%, #0a0d14 45%, #05070b 100%);
       background-color: var(--bg);
       color: var(--text);
-      min-height: 100vh;
+      min-height: 100dvh;
     }
 
     .app-header, button, .quick-action-box, .nav-item, .svg-btn, .track-cover, .mp-art, .fp-artwork {
@@ -61,13 +61,15 @@
       -webkit-user-select: text !important;
     }
 
-    /* Header */
+    /* ===================================================================
+       CLEAN & ORGANIZED STICKY HEADER
+       =================================================================== */
     .app-header {
-      padding: 12px 14px 10px;
+      padding: 10px 14px 10px;
       position: sticky;
       top: 0;
       z-index: 25;
-      background: rgba(7, 9, 14, 0.9);
+      background: rgba(7, 9, 14, 0.92);
       backdrop-filter: blur(22px);
       -webkit-backdrop-filter: blur(22px);
       border-bottom: 1px solid var(--border);
@@ -77,21 +79,22 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 6px;
-      margin-bottom: 10px;
+      gap: 10px;
+      margin-bottom: 8px;
     }
 
     .brand-box {
       display: flex;
       align-items: center;
       gap: 8px;
+      flex-shrink: 0;
     }
 
     .wave-icon {
       display: flex;
       align-items: center;
       gap: 2.5px;
-      height: 20px;
+      height: 18px;
     }
     .wave-icon span {
       width: 2.5px;
@@ -101,9 +104,9 @@
       animation: wave 1.2s ease-in-out infinite alternate;
     }
     .wave-icon span:nth-child(1) { height: 8px; animation-delay: 0.1s; }
-    .wave-icon span:nth-child(2) { height: 16px; animation-delay: 0.3s; }
-    .wave-icon span:nth-child(3) { height: 12px; animation-delay: 0.2s; }
-    .wave-icon span:nth-child(4) { height: 18px; animation-delay: 0.4s; }
+    .wave-icon span:nth-child(2) { height: 15px; animation-delay: 0.3s; }
+    .wave-icon span:nth-child(3) { height: 11px; animation-delay: 0.2s; }
+    .wave-icon span:nth-child(4) { height: 17px; animation-delay: 0.4s; }
 
     @keyframes wave {
       0% { transform: scaleY(0.5); }
@@ -111,7 +114,7 @@
     }
 
     .brand-title {
-      font-size: 17px;
+      font-size: 16.5px;
       font-weight: 900;
       letter-spacing: 0.5px;
       background: linear-gradient(135deg, #ffffff 60%, var(--cyan) 100%);
@@ -119,64 +122,94 @@
       -webkit-text-fill-color: transparent;
     }
 
-    .header-actions {
+    /* User Profile Pill (Never Overflows) */
+    .user-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 3px 10px 3px 4px;
+      border-radius: 22px;
+      font-size: 11.5px;
+      font-weight: 700;
+      max-width: 165px;
+      min-width: 0;
+    }
+    .user-badge span {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: #ffffff;
+    }
+    .user-avatar {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--cyan), #00b4d8);
+      color: #07090e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 900;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+    /* Organized Action Toolbar (Request & Admin) */
+    .header-toolbar {
       display: flex;
       align-items: center;
       gap: 8px;
+      margin-bottom: 9px;
     }
 
-    .btn-pill {
-      background: var(--surface);
+    .toolbar-btn {
+      flex: 1;
+      height: 34px;
+      background: rgba(255, 255, 255, 0.04);
       border: 1px solid var(--border);
       color: var(--text);
-      padding: 6px 12px;
-      border-radius: 20px;
+      padding: 0 10px;
+      border-radius: 11px;
       font-size: 11.5px;
       font-weight: 700;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 6px;
+      white-space: nowrap;
       transition: all 0.2s;
     }
-    .btn-pill:active { transform: scale(0.95); }
-
-    .user-badge {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid var(--border);
-      padding: 4px 10px 4px 5px;
-      border-radius: 20px;
-      font-size: 11.5px;
-      font-weight: 700;
+    .toolbar-btn:active { transform: scale(0.97); }
+    .toolbar-btn.request-btn {
+      border-color: rgba(0, 245, 212, 0.25);
+      background: rgba(0, 245, 212, 0.07);
+      color: #e6fffb;
     }
-    .user-avatar {
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      background: var(--cyan);
-      color: #07090e;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 10px;
-      font-weight: 900;
-      overflow: hidden;
+    .toolbar-btn.admin-btn {
+      border-color: rgba(239, 68, 68, 0.35);
+      background: rgba(239, 68, 68, 0.1);
+      color: #fecaca;
     }
-    .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .toolbar-btn.admin-btn.active {
+      background: rgba(239, 68, 68, 0.25);
+      border-color: #ef4444;
+      color: #ffffff;
+    }
 
     /* Search Bar */
     .search-wrapper {
       position: relative;
       display: flex;
       align-items: center;
-      margin-top: 4px;
     }
     .search-icon {
       position: absolute;
-      right: 14px;
+      right: 13px;
       color: var(--subtext);
       pointer-events: none;
     }
@@ -184,9 +217,9 @@
       width: 100%;
       background: rgba(14, 18, 26, 0.95);
       border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 10px 42px 10px 14px;
-      font-size: 13.5px;
+      border-radius: 13px;
+      padding: 9px 40px 9px 12px;
+      font-size: 13px;
       color: var(--text);
       outline: none;
       transition: all 0.2s;
@@ -198,42 +231,46 @@
 
     /* Filters / Quick Actions */
     .quick-actions {
-      display: flex;
-      gap: 8px;
-      padding: 12px 14px 4px;
-      overflow-x: auto;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 7px;
+      padding: 10px 14px 4px;
     }
-    .quick-actions::-webkit-scrollbar { display: none; }
 
     .quick-action-box {
-      flex: 1;
-      min-width: 90px;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 9px 8px;
+      padding: 8px 4px;
       text-align: center;
       cursor: pointer;
       transition: all 0.2s;
+      min-width: 0;
     }
     .quick-action-box.active {
       background: var(--cyan-soft);
       border-color: var(--cyan);
       color: var(--cyan);
     }
-    .qab-icon { font-size: 16px; margin-bottom: 2px; }
-    .qab-label { font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+    .qab-icon { font-size: 15px; margin-bottom: 2px; }
+    .qab-label {
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
 
     /* Section Heading */
     .section-heading {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 14px 16px 8px;
-      font-size: 13.5px;
+      padding: 12px 16px 8px;
+      font-size: 13px;
       font-weight: 800;
     }
-    .section-heading span { font-size: 11.5px; color: var(--subtext); font-weight: 600; }
+    .section-heading span { font-size: 11px; color: var(--subtext); font-weight: 600; }
 
     /* Track List */
     .track-list {
@@ -246,11 +283,11 @@
     .track-row {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 14px;
-      padding: 9px 12px;
+      padding: 8px 10px;
       transition: all 0.2s;
     }
     .track-row.active {
@@ -262,20 +299,25 @@
       width: 48px;
       height: 48px;
       border-radius: 11px;
-      background: #141a24;
+      background: linear-gradient(135deg, #162032, #0d131f);
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 18px;
       font-weight: 900;
-      color: #fff;
+      color: var(--cyan);
       overflow: hidden;
       flex-shrink: 0;
       cursor: pointer;
       position: relative;
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
-    .track-cover img { width: 100%; height: 100%; object-fit: cover; }
+    .track-cover img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
 
     .track-meta {
       flex: 1;
@@ -283,7 +325,7 @@
       cursor: pointer;
     }
     .track-title {
-      font-size: 13.5px;
+      font-size: 13px;
       font-weight: 700;
       white-space: nowrap;
       overflow: hidden;
@@ -291,7 +333,7 @@
       color: #ffffff;
     }
     .track-artist {
-      font-size: 11.5px;
+      font-size: 11px;
       color: var(--subtext);
       margin-top: 2px;
       white-space: nowrap;
@@ -302,7 +344,7 @@
     .track-actions {
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 2px;
       flex-shrink: 0;
     }
 
@@ -310,7 +352,7 @@
       background: none;
       border: none;
       color: var(--subtext);
-      padding: 6px;
+      padding: 5px;
       border-radius: 8px;
       cursor: pointer;
       display: inline-flex;
@@ -333,35 +375,36 @@
       font-size: 12.5px;
       font-weight: 700;
       cursor: pointer;
+      justify-content: center;
     }
 
     /* Floating Mini Player */
     .sp-mini-player {
       position: fixed;
-      bottom: 68px;
+      bottom: calc(66px + env(safe-area-inset-bottom, 0px));
       left: 12px;
       right: 12px;
-      height: 56px;
-      background: rgba(14, 18, 26, 0.94);
+      height: 54px;
+      background: rgba(14, 18, 26, 0.95);
       backdrop-filter: blur(25px);
       -webkit-backdrop-filter: blur(25px);
       border: 1px solid var(--border-cyan);
-      border-radius: 16px;
+      border-radius: 15px;
       display: flex;
       align-items: center;
       padding: 0 10px;
       gap: 10px;
       z-index: 40;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px var(--cyan-soft);
-      transform: translateY(140%);
+      transform: translateY(160%);
       transition: transform 0.4s var(--ease-spring);
     }
     .sp-mini-player.visible { transform: translateY(0); }
 
     .mp-art {
-      width: 40px;
-      height: 40px;
-      border-radius: 10px;
+      width: 38px;
+      height: 38px;
+      border-radius: 9px;
       background: #141a24;
       display: flex;
       align-items: center;
@@ -380,14 +423,14 @@
       cursor: pointer;
     }
     .mp-title {
-      font-size: 13px;
+      font-size: 12.5px;
       font-weight: 700;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
     .mp-artist {
-      font-size: 11px;
+      font-size: 10.5px;
       color: var(--subtext);
       margin-top: 1px;
       white-space: nowrap;
@@ -419,8 +462,8 @@
       bottom: 0;
       left: 0;
       right: 0;
-      height: 60px;
-      background: rgba(7, 9, 14, 0.95);
+      height: calc(58px + env(safe-area-inset-bottom, 0px));
+      background: rgba(7, 9, 14, 0.96);
       backdrop-filter: blur(25px);
       -webkit-backdrop-filter: blur(25px);
       border-top: 1px solid var(--border);
@@ -428,7 +471,7 @@
       justify-content: space-around;
       align-items: center;
       z-index: 35;
-      padding-bottom: env(safe-area-inset-bottom, 0);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
     }
     .nav-item {
       display: flex;
@@ -443,33 +486,35 @@
     }
     .nav-item.active { color: var(--cyan); }
     .nav-center-btn {
-      width: 44px;
-      height: 44px;
+      width: 42px;
+      height: 42px;
       border-radius: 50%;
       background: linear-gradient(135deg, var(--cyan), #00b4d8);
       color: #07090e;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-top: -16px;
+      margin-top: -14px;
       box-shadow: 0 4px 18px var(--cyan-glow);
       cursor: pointer;
     }
 
     /* ===================================================================
-       FULL-SCREEN PLAYER (CLEAN NEO-TOKYO GLASS DESIGN)
+       FULL-SCREEN PLAYER (100% FIT ON ALL MOBILE VIEWPORTS)
        =================================================================== */
     .full-player {
       position: fixed;
       inset: 0;
+      width: 100vw;
+      height: 100dvh;
+      max-height: 100dvh;
       z-index: 100;
       background: radial-gradient(circle at 50% 28%, rgba(0, 245, 212, 0.16) 0%, #070d16 55%, #04070d 100%);
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-      padding: 16px 20px 26px;
+      padding: max(12px, env(safe-area-inset-top, 12px)) 16px max(16px, env(safe-area-inset-bottom, 16px));
       transform: translateY(100%);
-      transition: transform 0.45s var(--ease-spring);
+      transition: transform 0.42s var(--ease-spring);
       overflow: hidden;
     }
     .full-player.open { transform: translateY(0); }
@@ -492,7 +537,9 @@
       display: flex;
       flex-direction: column;
       height: 100%;
+      min-height: 0;
       justify-content: space-between;
+      gap: 6px;
     }
 
     /* Top Header */
@@ -501,11 +548,12 @@
       justify-content: space-between;
       align-items: center;
       direction: ltr;
+      flex-shrink: 0;
     }
 
     .fp-circle-btn {
-      width: 38px;
-      height: 38px;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
       background: rgba(255, 255, 255, 0.06);
       backdrop-filter: blur(14px);
@@ -527,28 +575,25 @@
     .fp-pill-badge {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 7px;
       background: rgba(12, 22, 34, 0.72);
       backdrop-filter: blur(20px);
       border: 1px solid rgba(0, 245, 212, 0.38);
-      box-shadow: 0 0 20px rgba(0, 245, 212, 0.18);
-      padding: 7px 16px;
+      box-shadow: 0 0 18px rgba(0, 245, 212, 0.18);
+      padding: 6px 14px;
       border-radius: 30px;
-      font-size: 11.5px;
+      font-size: 11px;
       font-weight: 900;
-      letter-spacing: 1.4px;
+      letter-spacing: 1.3px;
       color: #ffffff;
     }
-    .fp-pill-badge b {
-      color: var(--cyan);
-      font-weight: 900;
-    }
+    .fp-pill-badge b { color: var(--cyan); }
 
     .pill-wave {
       display: flex;
       align-items: center;
       gap: 2px;
-      height: 12px;
+      height: 11px;
     }
     .pill-wave span {
       width: 2px;
@@ -564,38 +609,40 @@
     .fp-top-right {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
     }
 
-    /* Prominent Glowing Album Cover */
+    /* Responsive Artwork Container (Scales automatically to fit screen height) */
     .fp-artwork-wrap {
+      flex: 1;
+      min-height: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 6px auto;
-      position: relative;
+      margin: 2px auto;
+      width: 100%;
     }
 
     .fp-artwork {
-      width: min(275px, 72vw);
-      height: min(275px, 72vw);
-      border-radius: 26px;
+      width: min(245px, 64vw, 31vh);
+      height: min(245px, 64vw, 31vh);
+      border-radius: 24px;
       background: linear-gradient(145deg, #101928, #090e17);
-      box-shadow: 0 20px 55px rgba(0, 0, 0, 0.8), 0 0 38px rgba(0, 245, 212, 0.34);
+      box-shadow: 0 16px 45px rgba(0, 0, 0, 0.8), 0 0 32px rgba(0, 245, 212, 0.32);
       border: 1.5px solid rgba(0, 245, 212, 0.45);
       position: relative;
       overflow: hidden;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 68px;
+      font-size: 56px;
       font-weight: 900;
       cursor: pointer;
       transition: transform 0.4s var(--ease-spring), box-shadow 0.4s ease;
     }
     .fp-artwork.playing-scale {
       transform: scale(1.02);
-      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85), 0 0 48px rgba(0, 245, 212, 0.45);
+      box-shadow: 0 20px 52px rgba(0, 0, 0, 0.85), 0 0 42px rgba(0, 245, 212, 0.44);
     }
     .fp-artwork img {
       width: 100%;
@@ -607,15 +654,15 @@
 
     /* Synced Lyrics Floating Panel */
     .fp-lyrics-wrap {
-      width: min(295px, 80vw);
-      height: min(275px, 72vw);
-      border-radius: 26px;
-      background: rgba(10, 15, 24, 0.9);
+      width: min(295px, 84vw);
+      height: min(245px, 31vh);
+      border-radius: 24px;
+      background: rgba(10, 15, 24, 0.92);
       backdrop-filter: blur(28px);
       -webkit-backdrop-filter: blur(28px);
       border: 1.5px solid var(--border-cyan);
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75), 0 0 32px rgba(0, 245, 212, 0.25);
-      padding: 14px 12px;
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.75), 0 0 30px rgba(0, 245, 212, 0.25);
+      padding: 12px 10px;
       display: flex;
       flex-direction: column;
       position: relative;
@@ -626,48 +673,54 @@
       font-weight: 800;
       color: var(--cyan);
       text-align: center;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
     .fp-lyrics-scroll {
       flex: 1;
       overflow-y: auto;
       scroll-behavior: smooth;
-      padding: 30px 6px;
+      padding: 24px 6px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
       text-align: center;
     }
     .fp-lyrics-scroll::-webkit-scrollbar { width: 3px; }
     .fp-lyrics-scroll::-webkit-scrollbar-thumb { background: rgba(0, 245, 212, 0.35); border-radius: 4px; }
     .lyric-line {
-      font-size: 14px;
+      font-size: 13.5px;
       font-weight: 600;
       color: rgba(255, 255, 255, 0.35);
       cursor: pointer;
       transition: all 0.25s var(--ease-spring);
-      padding: 5px 8px;
-      border-radius: 10px;
-      line-height: 1.55;
+      padding: 4px 8px;
+      border-radius: 9px;
+      line-height: 1.5;
     }
     .lyric-line.active {
-      font-size: 17px;
+      font-size: 16px;
       font-weight: 900;
       color: #ffffff;
       text-shadow: 0 0 14px var(--cyan);
-      transform: scale(1.05);
+      transform: scale(1.04);
       background: var(--cyan-soft);
     }
-    .lyrics-empty { color: var(--subtext); font-size: 12.5px; margin: auto; padding: 16px; }
+    .lyrics-empty { color: var(--subtext); font-size: 12px; margin: auto; padding: 14px; }
+
+    /* Bottom Controls Wrapper */
+    .fp-bottom-block {
+      flex-shrink: 0;
+      width: 100%;
+    }
 
     /* Centered Track Title & Artist */
     .fp-center-details {
       text-align: center;
-      margin: 4px 0 10px;
-      padding: 0 8px;
+      margin-bottom: 6px;
+      padding: 0 6px;
     }
     .fp-title {
-      font-size: 21px;
+      font-size: 18.5px;
       font-weight: 900;
       color: #ffffff;
       white-space: nowrap;
@@ -680,11 +733,11 @@
       align-items: center;
       justify-content: center;
       gap: 6px;
-      margin-top: 4px;
+      margin-top: 2px;
       max-width: 100%;
     }
     .fp-artist {
-      font-size: 13.5px;
+      font-size: 12.5px;
       font-weight: 600;
       color: rgba(255, 255, 255, 0.72);
       white-space: nowrap;
@@ -695,28 +748,28 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 18px;
-      height: 18px;
+      width: 17px;
+      height: 17px;
       border-radius: 5px;
       background: var(--cyan-soft);
       border: 1px solid rgba(0, 245, 212, 0.4);
       color: var(--cyan);
-      font-size: 10px;
+      font-size: 9.5px;
       flex-shrink: 0;
     }
 
     /* Centered Symmetrical Audio Waveform */
     .fp-wave-section {
-      margin: 2px 0 14px;
+      margin: 2px 0 10px;
       direction: ltr;
     }
     .waveform-container {
       width: 100%;
-      height: 46px;
+      height: 38px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 2.5px;
+      gap: 2px;
       cursor: pointer;
       touch-action: none;
     }
@@ -740,38 +793,38 @@
     .fp-times {
       display: flex;
       justify-content: space-between;
-      font-size: 11px;
+      font-size: 10.5px;
       font-weight: 700;
       color: var(--subtext);
-      margin-top: 5px;
+      margin-top: 4px;
       font-variant-numeric: tabular-nums;
     }
 
-    /* Clean Two-Row Glass Controls Card (Matching Reference Image) */
+    /* Clean Two-Row Glass Controls Card */
     .fp-glass-card {
-      background: rgba(13, 21, 33, 0.72);
+      background: rgba(13, 21, 33, 0.78);
       backdrop-filter: blur(26px);
       -webkit-backdrop-filter: blur(26px);
       border: 1px solid rgba(255, 255, 255, 0.14);
-      border-radius: 26px;
-      padding: 14px 18px 12px;
+      border-radius: 22px;
+      padding: 11px 14px 10px;
       direction: ltr;
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
     }
 
     .fp-main-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 4px;
+      padding: 0 2px;
     }
 
     .fp-clean-btn {
       background: none;
       border: none;
       color: rgba(255, 255, 255, 0.85);
-      width: 40px;
-      height: 40px;
+      width: 38px;
+      height: 38px;
       border-radius: 50%;
       display: inline-flex;
       align-items: center;
@@ -788,16 +841,16 @@
     .fp-clean-btn.one::after {
       content: '1';
       position: absolute;
-      top: 5px;
-      right: 6px;
-      font-size: 8.5px;
+      top: 4px;
+      right: 5px;
+      font-size: 8px;
       font-weight: 900;
       color: var(--cyan);
     }
 
     .fp-play-circle {
-      width: 62px;
-      height: 62px;
+      width: 56px;
+      height: 56px;
       border-radius: 50%;
       background: radial-gradient(circle at 30% 30%, #6fffe9 0%, var(--cyan) 60%, #00bfa5 100%);
       color: #061018;
@@ -806,7 +859,7 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      box-shadow: 0 0 28px var(--cyan-glow), 0 0 55px rgba(0, 245, 212, 0.25);
+      box-shadow: 0 0 24px var(--cyan-glow), 0 0 46px rgba(0, 245, 212, 0.25);
       transition: transform 0.2s var(--ease-spring);
     }
     .fp-play-circle:active { transform: scale(0.92); }
@@ -815,24 +868,24 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-top: 10px;
-      padding-top: 8px;
+      margin-top: 8px;
+      padding-top: 7px;
       border-top: 1px solid rgba(255, 255, 255, 0.06);
     }
 
     .fp-sub-group {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
     }
 
     .fp-sub-btn {
       background: rgba(255, 255, 255, 0.04);
       border: 1px solid rgba(255, 255, 255, 0.08);
-      color: rgba(255, 255, 255, 0.78);
-      height: 32px;
+      color: rgba(255, 255, 255, 0.82);
+      height: 30px;
       padding: 0 11px;
-      border-radius: 16px;
+      border-radius: 15px;
       font-size: 11px;
       font-weight: 700;
       display: inline-flex;
@@ -842,8 +895,8 @@
       transition: all 0.2s;
     }
     .fp-sub-btn:active { transform: scale(0.94); }
-    .fp-sub-btn.active, .fp-sub-btn.pv-highlight {
-      border-color: rgba(0, 245, 212, 0.4);
+    .fp-sub-btn.pv-highlight {
+      border-color: rgba(0, 245, 212, 0.42);
       color: var(--cyan);
       background: rgba(0, 245, 212, 0.1);
     }
@@ -851,8 +904,8 @@
       background: none;
       border: none;
       color: rgba(255, 255, 255, 0.72);
-      width: 32px;
-      height: 32px;
+      width: 30px;
+      height: 30px;
       border-radius: 50%;
       display: inline-flex;
       align-items: center;
@@ -883,7 +936,7 @@
       background: #0d121c;
       border: 1px solid var(--border-cyan);
       border-radius: 24px 24px 0 0;
-      padding: 20px 20px 32px;
+      padding: 20px 20px calc(28px + env(safe-area-inset-bottom, 0px));
       box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.8);
       transform: translateY(100%);
       transition: transform 0.35s var(--ease-spring);
@@ -899,7 +952,7 @@
     .modal-title { font-size: 15px; font-weight: 900; color: #ffffff; }
     .modal-close-btn { background: none; border: none; color: var(--subtext); font-size: 18px; cursor: pointer; }
 
-    .queue-body { max-height: 60vh; overflow-y: auto; margin-top: 10px; }
+    .queue-body { max-height: 55dvh; overflow-y: auto; margin-top: 10px; }
     .queue-section-header { display: flex; justify-content: space-between; align-items: center; margin: 12px 0 8px; }
     .queue-section-title { font-size: 12px; font-weight: 800; color: var(--subtext); }
     .queue-clear-btn { background: none; border: none; color: #ef4444; font-size: 11px; font-weight: 700; cursor: pointer; }
@@ -940,16 +993,16 @@
 
     .toast {
       position: fixed;
-      top: 16px;
+      top: 14px;
       left: 50%;
       transform: translateX(-50%) translateY(-90px);
       background: rgba(14, 18, 26, 0.96);
       border: 1px solid var(--cyan);
       box-shadow: 0 0 20px var(--cyan-soft);
       color: #ffffff;
-      padding: 10px 18px;
+      padding: 9px 16px;
       border-radius: 14px;
-      font-size: 12.5px;
+      font-size: 12px;
       font-weight: 700;
       z-index: 250;
       transition: transform 0.35s var(--ease-spring);
@@ -960,9 +1013,9 @@
     .empty-box { text-align: center; color: var(--subtext); padding: 40px 20px; font-size: 13.5px; }
 
     .admin-bar {
-      margin: 8px 14px;
+      margin: 8px 14px 0;
       background: rgba(239, 68, 68, 0.12);
-      border: 1px solid rgba(239, 68, 68, 0.3);
+      border: 1px solid rgba(239, 68, 68, 0.35);
       border-radius: 12px;
       padding: 8px 12px;
       display: none;
@@ -1012,8 +1065,9 @@
     </div>
   </div>
 
-  <!-- Header -->
+  <!-- Clean Organized Header -->
   <header class="app-header">
+    <!-- Row 1: Logo + User Profile -->
     <div class="header-top">
       <div class="brand-box">
         <div class="wave-icon">
@@ -1021,23 +1075,27 @@
         </div>
         <div class="brand-title">GAPMUSIC</div>
       </div>
-      <div class="header-actions">
-        <button class="btn-pill" id="adminToggleBtn" style="display:none;" onclick="toggleAdminMode()">🛡️ پنل ادمین</button>
-        <button class="btn-pill" onclick="openRequestModal()">📩 ثبت درخواست</button>
-        <div class="user-badge" id="userBadge">
-          <div class="user-avatar" id="tgUserAvatar">U</div>
-          <span id="tgUserName">کاربر</span>
-        </div>
+
+      <div class="user-badge" id="userBadge">
+        <div class="user-avatar" id="tgUserAvatar">U</div>
+        <span id="tgUserName">کاربر</span>
       </div>
     </div>
 
+    <!-- Row 2: Neat Action Buttons (Request Song & Admin Panel) -->
+    <div class="header-toolbar">
+      <button class="toolbar-btn request-btn" onclick="openRequestModal()">📩 ثبت درخواست آهنگ</button>
+      <button class="toolbar-btn admin-btn" id="adminToggleBtn" style="display:none;" onclick="toggleAdminMode()">🛡️ پنل مدیریت ادمین</button>
+    </div>
+
+    <!-- Row 3: Search Input -->
     <div class="search-wrapper">
-      <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+      <svg class="search-icon" width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
       <input type="text" class="search-input" id="searchInput" placeholder="جستجوی فارسی یا انگلیسی (تتلو، شایع، The Weeknd...)" oninput="onSearch()" />
     </div>
   </header>
 
-  <!-- Quick Filter Buttons -->
+  <!-- Quick Filter Buttons (4 Equal Columns) -->
   <div class="quick-actions">
     <div class="quick-action-box active" id="boxAll" onclick="setFilter('all')">
       <div class="qab-icon">🎵</div>
@@ -1059,8 +1117,8 @@
 
   <!-- Admin Bar -->
   <div class="admin-bar" id="adminBar">
-    <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:800;">
-      <span>🛡️ پنل مدیریت ادمین فعال است</span>
+    <div style="display:flex; justify-content:space-between; font-size:11.5px; font-weight:800;">
+      <span>🛡️ حالت مدیریت ادمین فعال است (حذف سریع ترک‌ها)</span>
       <span id="adminUsersCount"></span>
     </div>
   </div>
@@ -1101,7 +1159,7 @@
       <span>جستجو</span>
     </div>
     <div class="nav-center-btn" onclick="openFullPlayer()" title="پخش‌کننده">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v18M8 7v10M16 7v10M4 10v4M20 10v4" stroke="#07090e" stroke-width="2.4" stroke-linecap="round"/></svg>
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v18M8 7v10M16 7v10M4 10v4M20 10v4" stroke="#07090e" stroke-width="2.4" stroke-linecap="round"/></svg>
     </div>
     <div class="nav-item" id="navLib" onclick="switchNav('lib')">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
@@ -1114,13 +1172,13 @@
   </nav>
 
   <!-- ===================================================================
-       FULL-SCREEN CLEAN PLAYER (EXACT REFERENCE DESIGN + SEND TO PV)
+       FULL-SCREEN PLAYER (MOBILE VIEWPORT FITTED)
        =================================================================== -->
   <div class="full-player" id="fullPlayer">
     <div class="fp-ambient-bg" id="fpAmbientBg"></div>
 
     <div class="fp-content-layer">
-      <!-- Top Header: Down Arrow | GAPMUSIC Capsule | Search + Download -->
+      <!-- Top Header -->
       <div class="fp-top">
         <button class="fp-circle-btn" onclick="closeFullPlayer()" title="بستن پلیر">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
@@ -1135,10 +1193,10 @@
 
         <div class="fp-top-right">
           <button class="fp-circle-btn" onclick="closeFullPlayer(); switchNav('search');" title="جستجو">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
           </button>
           <button class="fp-circle-btn" onclick="downloadCurrentSong()" title="دانلود مستقیم">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
           </button>
         </div>
       </div>
@@ -1157,7 +1215,8 @@
         </div>
       </div>
 
-      <div>
+      <!-- Bottom Block -->
+      <div class="fp-bottom-block">
         <!-- Centered Title & Artist -->
         <div class="fp-center-details">
           <div class="fp-title" id="fpTitle">عنوان موزیک</div>
@@ -1178,39 +1237,37 @@
 
         <!-- Clean Two-Row Glass Control Box -->
         <div class="fp-glass-card">
-          <!-- Main Row: Shuffle | Prev | Play/Pause | Next | Repeat -->
           <div class="fp-main-row">
             <button class="fp-clean-btn" id="shuffleBtn" onclick="toggleShuffle()" title="پخش تصادفی">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
             </button>
 
             <button class="fp-clean-btn" onclick="playPrev()" title="آهنگ قبلی">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+              <svg width="23" height="23" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
             </button>
 
             <button class="fp-play-circle" id="fpPlayBtn" onclick="togglePlay()" title="پخش / توقف">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
             </button>
 
             <button class="fp-clean-btn" onclick="playNext()" title="آهنگ بعدی">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+              <svg width="23" height="23" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
             </button>
 
             <button class="fp-clean-btn" id="repeatBtn" onclick="cycleRepeat()" title="تکرار">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
             </button>
           </div>
 
-          <!-- Sub Row: Send to PV & Like on Left | Lyrics Mic & Queue on Right -->
           <div class="fp-sub-row">
             <div class="fp-sub-group">
               <button class="fp-sub-btn pv-highlight" id="fpSendPvBtn" onclick="sendCurrentToChat()" title="ارسال فایل به پی‌وی تلگرام">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
                 <span>ارسال به پی‌وی</span>
               </button>
 
               <button class="fp-sub-icon-only" id="fpFavBtn" onclick="toggleCurrentFav()" title="افزودن به پلی‌لیست">
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
               </button>
             </div>
 
@@ -1220,7 +1277,7 @@
               </button>
 
               <button class="fp-sub-icon-only" id="queueToggleBtn" onclick="toggleQueueModal()" title="صف پخش">
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
               </button>
             </div>
           </div>
@@ -1331,10 +1388,10 @@
 
     const PLAY_SVG = '<svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
     const PAUSE_SVG = '<svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
-    const HEART_OUTLINE = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
-    const HEART_FILLED = '<svg width="19" height="19" viewBox="0 0 24 24" fill="#00f5d4"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>';
-    const SEND_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>';
-    const DOWNLOAD_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>';
+    const HEART_OUTLINE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+    const HEART_FILLED = '<svg width="18" height="18" viewBox="0 0 24 24" fill="#00f5d4"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>';
+    const SEND_SVG = '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>';
+    const DOWNLOAD_SVG = '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>';
     const TRASH_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
 
     let currentFilter = 'all';
@@ -1351,6 +1408,7 @@
     let currentSong = null;
     let searchTimer = null;
     const coverCache = new Map();
+    const pendingCoverRequests = new Map();
 
     let isLyricsOpen = false;
     let currentLyrics = [];
@@ -1363,7 +1421,7 @@
     const audio = document.getElementById('audioPlayer');
 
     // Symmetrical Centered Waveform Bars
-    const WAVE_BARS_COUNT = 54;
+    const WAVE_BARS_COUNT = 50;
     let baseHeights = [];
     let waveBarsEls = [];
     let audioCtx = null;
@@ -1501,6 +1559,7 @@
 
     function toggleAdminMode() {
       adminModeActive = !adminModeActive;
+      document.getElementById('adminToggleBtn').classList.toggle('active', adminModeActive);
       document.getElementById('adminBar').classList.toggle('visible', adminModeActive);
       renderSongs();
     }
@@ -1528,6 +1587,9 @@
       }
     }
 
+    // ===================================================================
+    // FULL ALBUM COVER LOADER FOR ALL TRACKS (LAZY INTERSECTION OBSERVER)
+    // ===================================================================
     async function fetchCover(song, targetIds = []) {
       const key = `${song.performer}_${song.title}`;
       if (coverCache.has(key)) {
@@ -1539,26 +1601,50 @@
         return url;
       }
 
-      try {
-        const res = await fetch(`/api/cover?title=${encodeURIComponent(song.title)}&artist=${encodeURIComponent(song.performer)}`);
-        const data = await res.json();
-        const artwork = data.artwork || null;
-        coverCache.set(key, artwork);
-
-        if (artwork) {
-          targetIds.forEach(id => applyImg(id, artwork));
-          if (currentSong && currentSong.uid === song.uid) setAmbientBackdrop(artwork);
+      if (pendingCoverRequests.has(key)) {
+        const url = await pendingCoverRequests.get(key);
+        if (url) {
+          targetIds.forEach(id => applyImg(id, url));
+          if (currentSong && currentSong.uid === song.uid) setAmbientBackdrop(url);
         }
-        return artwork;
-      } catch (e) {
-        return null;
+        return url;
       }
+
+      const promise = (async () => {
+        try {
+          const res = await fetch(`/api/cover?title=${encodeURIComponent(song.title)}&artist=${encodeURIComponent(song.performer)}`);
+          const data = await res.json();
+          const artwork = data.artwork || null;
+          coverCache.set(key, artwork);
+          return artwork;
+        } catch (e) {
+          return null;
+        } finally {
+          pendingCoverRequests.delete(key);
+        }
+      })();
+
+      pendingCoverRequests.set(key, promise);
+      const artwork = await promise;
+
+      if (artwork) {
+        targetIds.forEach(id => applyImg(id, artwork));
+        if (currentSong && currentSong.uid === song.uid) setAmbientBackdrop(artwork);
+      }
+      return artwork;
     }
 
     function applyImg(elId, url) {
       const el = document.getElementById(elId);
       if (el && url) {
-        el.innerHTML = `<img src="${url}" alt="album-cover" loading="lazy" />`;
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = 'cover';
+        img.loading = 'lazy';
+        img.onload = () => {
+          el.innerHTML = '';
+          el.appendChild(img);
+        };
       }
     }
 
@@ -1569,6 +1655,19 @@
         bgEl.style.opacity = '0.42';
       }
     }
+
+    const coverObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const el = entry.target;
+          const idx = parseInt(el.dataset.idx, 10);
+          if (!isNaN(idx) && currentSongs[idx]) {
+            fetchCover(currentSongs[idx], [el.id]);
+          }
+          coverObserver.unobserve(el);
+        }
+      });
+    }, { rootMargin: '250px' });
 
     function parseLRC(lrcText) {
       if (!lrcText) return [];
@@ -1767,7 +1866,6 @@
       }
     }
 
-    // Single Clean Send to PV
     let isSendingToChat = false;
     async function sendToChat(uid, songId) {
       if (isSendingToChat) return;
@@ -1945,7 +2043,7 @@
 
         return `
           <div class="track-row ${isCurrent ? 'active' : ''}">
-            <div class="track-cover" id="tr_${s.uid}" onclick="playSongByIndex(${idx})">
+            <div class="track-cover" id="tr_${s.uid}" data-idx="${idx}" onclick="playSongByIndex(${idx})">
               ${escapeHtml(s.title[0] || '🎵')}
             </div>
             <div class="track-meta" onclick="playSongByIndex(${idx})">
@@ -1954,7 +2052,7 @@
             </div>
             <div class="track-actions">
               <button class="svg-btn" onclick="event.stopPropagation(); addToQueueByIndex(${idx})" title="افزودن به صف پخش">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
               </button>
               <button class="svg-btn ${isFav ? 'liked' : ''}" onclick="event.stopPropagation(); toggleFav(${s.id}, this)" title="علاقه‌مندی">
                 ${isFav ? HEART_FILLED : HEART_OUTLINE}
@@ -1971,7 +2069,8 @@
         `;
       }).join('');
 
-      currentSongs.slice(0, 30).forEach(s => fetchCover(s, [`tr_${s.uid}`]));
+      // فعال کردن لود کاور برای تمام آهنگ‌ها هنگام اسکرول
+      document.querySelectorAll('.track-cover').forEach(el => coverObserver.observe(el));
     }
 
     async function playSongByIndex(idx) {
